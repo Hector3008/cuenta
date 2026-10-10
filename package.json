@@ -1,0 +1,18 @@
+{
+  "name": "cuenta",
+  "version": "0.1.0",
+  "description": "Cuenta de la persona: login con contraseña, selección de empresa y perfil (contraseña y PIN propios). Se monta en el gateway.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": "./src/index.js",
+  "files": ["src", "client/dist"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "dev": "npm --prefix client run dev",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.0.0"
+  }
+}
