@@ -129,3 +129,30 @@ body {
   background: color-mix(in srgb, var(--color-principal) 12%, var(--color-superficie));
   font-size: .9375rem;
 }
+
+/* Inicio (5.22): un acceso por destino disponible */
+.rejilla-destinos {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+.destino {
+  width: 100%; height: 100%; text-align: left; padding: 16px; font: inherit; color: inherit;
+  background: var(--color-fondo); border: 1px solid var(--color-borde);
+  border-radius: 8px; cursor: pointer;
+}
+.destino:hover { border-color: var(--color-principal); }
+.destino:focus-visible { outline: 2px solid var(--color-principal); outline-offset: 1px; }
+.destino strong { display: block; margin-bottom: 2px; }
+.destino small { display: block; color: var(--color-texto-suave); }
+.acciones-inicio { margin-top: 24px; display: grid; gap: 0; }
+.enlace-volver {
+  display: inline-block; margin: 0 0 12px; padding: 0; background: none; border: 0;
+  color: var(--color-texto-suave); font: inherit; font-size: .875rem; cursor: pointer;
+}
+.enlace-volver:hover { color: var(--color-texto); }
+.campo select {
+  width: 100%; padding: 12px 14px; font: inherit; color: inherit;
+  background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 8px;
+}
+.campo select:focus-visible { outline: 2px solid var(--color-principal); outline-offset: 1px; }

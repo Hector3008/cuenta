@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, mensajeDeError } from "../api.js";
+import { destinosAccesibles } from "../destinos.js";
 
 const MINIMO = 10;
 
@@ -105,12 +106,62 @@ function CambioPin({ tienePin }) {
   );
 }
 
-export default function Perfil({ yo, alCambiarEmpresa, alSalir }) {
+// Qué se abre al entrar. Es una preferencia de la persona (global, no por empresa): solo se ofrecen los
+// destinos que puede ver en la empresa activa. Si el guardado ya no aplica aquí, se avisa y se abre Inicio.
+function PaginaPrincipal({ yo, alGuardado }) {
+  const opciones = destinosAccesibles(yo);
+  const guardada = yo.paginaPrincipal;
+  const aplica = Boolean(guardada) && opciones.some((d) => d.id === guardada);
+  const [valor, setValor] = useState(aplica ? guardada : "");
+  const [error, setError] = useState(null);
+  const [listo, setListo] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  async function cambiar(e) {
+    const nuevo = e.target.value;
+    setValor(nuevo);
+    setListo(false);
+    setError(null);
+    setEnviando(true);
+    try {
+      await api.guardarPaginaPrincipal(nuevo || null);
+      await alGuardado();
+      setListo(true);
+    } catch (err) {
+      setValor(aplica ? guardada : "");
+      setError(mensajeDeError(err));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div>
+      {error && <p className="aviso-error" role="alert">{error}</p>}
+      {listo && <p className="aviso-ok" role="status">Guardado.</p>}
+      {guardada && !aplica && (
+        <p className="sub" style={{ marginTop: 0 }}>
+          Tu página principal guardada no está disponible en esta empresa; se abrirá Inicio.
+        </p>
+      )}
+      <label className="campo"><span>Al entrar, abrir</span>
+        <select value={valor} onChange={cambiar} disabled={enviando}>
+          <option value="">Inicio</option>
+          {opciones.map((d) => <option key={d.id} value={d.id}>{d.titulo}</option>)}
+        </select>
+        <small>Vale para todas tus empresas; si no aplica en una, se abre Inicio.</small>
+      </label>
+    </div>
+  );
+}
+
+export default function Perfil({ yo, alVolver, alActualizar, alCambiarEmpresa, alSalir }) {
   const empresa = yo.empresas.find((e) => e.id === yo.empresaActivaId);
   const nombre = yo.usuario?.nombre;
   return (
     <main className="centrado" style={{ alignItems: "start" }}>
       <div className="tarjeta" style={{ maxWidth: 480 }}>
+        <button type="button" className="enlace-volver" onClick={alVolver}>← Inicio</button>
         <h1>{nombre || "Mi cuenta"}</h1>
         {yo.usuario?.correo && <p className="sub" style={{ marginBottom: 4 }}>{yo.usuario.correo}</p>}
         {empresa && (
@@ -125,6 +176,7 @@ export default function Perfil({ yo, alCambiarEmpresa, alSalir }) {
           </button>
         )}
 
+        <Seccion titulo="Página principal"><PaginaPrincipal yo={yo} alGuardado={alActualizar} /></Seccion>
         <Seccion titulo="Contraseña"><CambioPassword /></Seccion>
         {yo.pinHabilitado && <Seccion titulo="PIN de tablet"><CambioPin tienePin={yo.tienePin} /></Seccion>}
 

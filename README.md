@@ -18,16 +18,26 @@ Debe montarse en `<base>/cuenta/`: el cliente calcula la ruta de la API con `new
 ```
 npm run dev          # Vite en :5173, con proxy a http://localhost:3000 (GATEWAY_URL para cambiarlo)
 npm run build        # compila a client/dist (commitearlo)
-npm test             # prueba del router
+npm test             # router, registro de destinos y página principal
 ```
 
 ## Pantallas
 
 La pantalla sale del estado de `/auth/yo`, sin enrutador:
 
-sin sesión → `Login` · `debeCambiarPassword` → `CambiarPassword` · sin empresa activa → `ElegirEmpresa` · si no → `Perfil`.
+sin sesión → `Login` · `debeCambiarPassword` → `CambiarPassword` · sin empresa activa → `ElegirEmpresa` · si no → `Inicio` (o la página principal de la persona, una vez por entrada). `Perfil` se abre desde Inicio.
 
-`Perfil`: datos de la persona y empresa activa, cambio de empresa (si tiene varias), cambio de contraseña, PIN de tablet (solo si la empresa lo tiene habilitado) y cerrar sesión.
+`Inicio`: saludo, empresa y rol, y un acceso por cada destino que la persona puede ver. Es un **lanzador**: cada servicio trae su propio front y aquí solo se enlaza a él.
+
+`Perfil`: datos de la persona y empresa activa, página principal, cambio de empresa (si tiene varias), cambio de contraseña, PIN de tablet (solo si la empresa lo tiene habilitado) y cerrar sesión.
+
+## Destinos y página principal
+
+`client/src/destinos.js` es el **registro único** de destinos. Un acceso se muestra si está `disponible`, la empresa tiene el servicio contratado y activo (`yo.servicios`) y la persona tiene el permiso (`yo.permisos`, misma regla que `permite` del núcleo). Mostrar u ocultar aquí **no es seguridad**: la seguridad vive en el backend.
+
+Para sumar el front de un servicio: activar su línea en `DESTINOS` (`disponible: true` y `abre: { enlace: "restaurante/" }`, ruta relativa al gateway). Los destinos previstos sin pantalla se quedan con `disponible: false` y no aparecen.
+
+`paginaPrincipal` (preferencia global de la persona, `PUT /auth/preferencias`) guarda el **id** de un destino, nunca una URL. Al entrar se abre una sola vez por persona y empresa y por pestaña (marca en `sessionStorage`), nunca antes del cambio obligatorio de contraseña y se reevalúa al cambiar de empresa. Si el destino ya no aplica (otra empresa, rol cambiado, retirado), se queda en Inicio sin error. Cerrar sesión olvida las marcas.
 
 ## Dónde está lo que depende del backend
 

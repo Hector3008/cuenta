@@ -63,12 +63,20 @@ export function normalizarYo(d) {
     empresaActivaId: yo.empresaActivaId ?? yo.empresaId ?? null,
     empresas,
     permisos: yo.permisos ?? yo.rol?.permisos ?? [],
+    // Códigos de los servicios contratados y activos de la empresa activa (5.22). Sin ellos, Inicio
+    // no muestra accesos de servicios (fallo seguro).
+    servicios: Array.isArray(yo.servicios) ? yo.servicios.filter((s) => typeof s === "string") : [],
+    // Id de un destino de Inicio (destinos.js) o null. Nunca una URL.
+    paginaPrincipal: typeof yo.paginaPrincipal === "string" && yo.paginaPrincipal ? yo.paginaPrincipal : null,
     debeCambiarPassword: Boolean(yo.debeCambiarPassword ?? yo.usuario?.debeCambiarPassword),
     // ¿Está habilitado el PIN en esta empresa? Si /auth/yo no lo informa, la sección de PIN no se muestra.
     pinHabilitado: Boolean(yo.pinHabilitado ?? yo.seguridad?.pin?.habilitado ?? yo.empresa?.seguridad?.pin?.habilitado),
     tienePin: Boolean(yo.tienePin ?? yo.pin?.definido),
   };
 }
+
+/** URL absoluta (de ruta) hacia otro servicio montado en el gateway, por ejemplo "restaurante/". */
+export const urlDeServicio = (ruta) => BASE + String(ruta).replace(/^\/+/, "");
 
 export const api = {
   yo: async () => normalizarYo(await pedir("GET", "auth/yo")),
@@ -77,8 +85,10 @@ export const api = {
   elegirEmpresa: (empresaId) => pedir("POST", "auth/empresa", { empresaId }),
   cambiarPassword: (passwordActual, passwordNueva) =>
     pedir("POST", "auth/password", { passwordActual, passwordNueva }),
-  // Supuesto: PUT /auth/pin recibe { pin, password } (la persona se identifica con su contraseña).
+  // PUT /auth/pin recibe { pin, password } (confirmado en core/src/auth/pin.js).
   cambiarPin: (pin, password) => pedir("PUT", "auth/pin", { pin, password }),
+  // Guarda la página principal (id de destino) o la quita con null. Es una preferencia global de la persona.
+  guardarPaginaPrincipal: (paginaPrincipal) => pedir("PUT", "auth/preferencias", { paginaPrincipal }),
 };
 
 /** Texto para mostrar al usuario. No distingue correo inexistente de contraseña errónea
