@@ -27,7 +27,7 @@ function extraerError(datos) {
   };
 }
 
-async function pedir(metodo, ruta, cuerpo) {
+export async function pedir(metodo, ruta, cuerpo) {
   const cabeceras = { Accept: "application/json" };
   const opciones = { method: metodo, credentials: "same-origin", headers: cabeceras };
   // El backend exige esta cabecera en POST, PUT y DELETE (protección CSRF, 5.13).

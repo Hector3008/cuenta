@@ -59,30 +59,33 @@ const catalogoDePrueba = [
 
 const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => d.id).sort();
 
-test("accesibles: hoy, con el registro real, todos ven solo su perfil", () => {
-  for (const yo of [yoCon(["*"]), yoCon(MESERO), yoCon(COCINA), yoCon([], [])])
-    assert.deepEqual(destinosAccesibles(yo).map((d) => d.id), ["cuenta.perfil"]);
+test("accesibles: con el registro real, cada perfil ve lo suyo (aún no hay fronts de servicios)", () => {
+  const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]);
+  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos"]);
+  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos"]);
+  assert.deepEqual(ids(yoCon([], [])), ["cuenta.perfil", "empresa.datos"]);
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.equipo", "restaurante.cocina", "restaurante.pedidos"]);
-  assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "restaurante.pedidos"]);
-  assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "restaurante.cocina", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "restaurante.cocina", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "restaurante.cocina", "restaurante.pedidos"]);
 });
 
 test("accesibles: sin el servicio contratado no hay acceso, ni siquiera con `*`", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.equipo"]);
-  assert.deepEqual(idsVisibles(yoCon(["*"], [])), ["cuenta.perfil", "empresa.equipo"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"], [])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]);
 });
 
 test("accesibles: un rol propio con permisos sueltos ve exactamente lo que esos permisos habilitan", () => {
   const encargado = yoCon(["usuario:gestionar", "documento:*"]);
-  assert.deepEqual(idsVisibles(encargado), ["cuenta.perfil", "empresa.equipo", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(encargado), ["cuenta.perfil", "empresa.datos", "empresa.equipo", "restaurante.pedidos"]);
 });
 
 test("accesibles: tolera una respuesta sin permisos ni servicios (fallo seguro)", () => {
-  assert.deepEqual(destinosAccesibles({}, catalogoDePrueba).map((d) => d.id), ["cuenta.perfil"]);
-  assert.deepEqual(destinosAccesibles(null, catalogoDePrueba).map((d) => d.id), ["cuenta.perfil"]);
+  assert.deepEqual(destinosAccesibles({}, catalogoDePrueba).map((d) => d.id), ["cuenta.perfil", "empresa.datos"]);
+  assert.deepEqual(destinosAccesibles(null, catalogoDePrueba).map((d) => d.id), ["cuenta.perfil", "empresa.datos"]);
 });
 
 test("accesibles: un destino previsto (no disponible) nunca se muestra", () => {

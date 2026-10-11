@@ -29,6 +29,8 @@ sin sesión → `Login` · `debeCambiarPassword` → `CambiarPassword` · sin em
 
 `Inicio`: saludo, empresa y rol, y un acceso por cada destino que la persona puede ver. Es un **lanzador**: cada servicio trae su propio front y aquí solo se enlaza a él.
 
+`Administracion` (`client/src/admin/`): vista con pestañas **Equipo**, **Catálogo** y **Empresa**, con CRUD según permisos (`usuario:gestionar`, `catalogo:leer|crear|editar|gestionar`, `rol:gestionar`). Se abre desde los destinos `empresa.equipo`, `empresa.catalogo` y `empresa.datos` de Inicio. Usa `pedir` de `api.js` y `permite` de `destinos.js`; lo que supone de las respuestas de `/empleados` y `/catalogo` (listas, contraseña temporal) está en `admin/Equipo.jsx` y `admin/http.js`. La empresa es solo de lectura: el núcleo no tiene ruta para editarla.
+
 `Perfil`: datos de la persona y empresa activa, página principal, cambio de empresa (si tiene varias), cambio de contraseña, PIN de tablet (solo si la empresa lo tiene habilitado) y cerrar sesión.
 
 ## Destinos y página principal

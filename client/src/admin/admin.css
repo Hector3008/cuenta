@@ -1,0 +1,38 @@
+/* Solo variables de diseño (5.10): la apariencia por empresa cambiará únicamente sus valores.
+   Avisos, campos y botones reutilizan las clases de estilos.css (.aviso-error, .aviso-ok, .campo, .boton). */
+.adm { max-width: 960px; margin: 0 auto; padding: 24px 16px; color: var(--color-texto); }
+.adm-titulo { margin: 0 0 12px; font-size: 1.375rem; }
+.adm-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--color-borde); margin: 0 0 16px; overflow-x: auto; }
+.adm-tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; cursor: pointer; font: inherit; color: var(--color-texto-suave); }
+.adm-tab--activa { border-bottom-color: var(--color-principal); color: var(--color-texto); font-weight: 600; }
+.adm-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+.adm-cabecera h2, .adm-cabecera h3 { margin: 0; }
+.adm-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.adm-btn { font: inherit; font-size: .875rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--color-borde); background: var(--color-superficie); color: var(--color-texto); cursor: pointer; }
+.adm-btn:hover { border-color: var(--color-principal); }
+.adm-btn:disabled { opacity: .6; cursor: default; }
+.adm-btn--primario { background: var(--color-principal); border-color: var(--color-principal); color: var(--color-principal-texto); }
+.adm-btn--peligro { border-color: var(--color-error); color: var(--color-error); }
+.adm-link { background: none; border: 0; color: inherit; cursor: pointer; font: inherit; padding: 0 4px; }
+.adm-check { display: inline-flex; gap: 6px; align-items: center; font-size: .875rem; }
+.adm-filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.adm-filtros input[type="search"], .adm-filtros select, .adm textarea { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--color-borde); background: var(--color-superficie); color: var(--color-texto); }
+.adm-filtros input[type="search"] { flex: 1 1 200px; }
+.adm .campo textarea { width: 100%; box-sizing: border-box; }
+.adm-form { padding: 16px; margin: 12px 0; border: 1px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); max-width: 520px; }
+.adm-form h3 { margin: 0 0 12px; }
+.adm-aviso { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin: 8px 0; }
+.adm-tabla-caja { overflow-x: auto; }
+.adm-tabla { width: 100%; border-collapse: collapse; }
+.adm-tabla th, .adm-tabla td { text-align: left; padding: 8px; border-bottom: 1px solid var(--color-borde); vertical-align: top; }
+.adm-tabla th { color: var(--color-texto-suave); font-size: .8125rem; font-weight: 600; }
+.adm-num { text-align: right !important; white-space: nowrap; }
+.adm-fila--baja { opacity: .6; }
+.adm-celda-acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.adm-confirmar { display: inline-flex; gap: 6px; align-items: center; font-size: .8125rem; }
+.adm-vacio, .adm-nota { color: var(--color-texto-suave); }
+.adm-datos { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 8px 0; }
+.adm-datos dt { font-weight: 600; }
+.adm-datos dd { margin: 0; }
+.adm-permisos { display: flex; gap: 4px; flex-wrap: wrap; }
+.adm code { font-size: .85em; }

@@ -6,6 +6,7 @@ import ElegirEmpresa from "./pantallas/ElegirEmpresa.jsx";
 import CambiarPassword from "./pantallas/CambiarPassword.jsx";
 import Inicio from "./pantallas/Inicio.jsx";
 import Perfil from "./pantallas/Perfil.jsx";
+import Administracion from "./admin/Administracion.jsx";
 
 // Sin enrutador: la pantalla sale del estado de la sesión (/auth/yo).
 //   sin sesión → login · debe cambiar contraseña → cambio · sin empresa activa → elegir ·
@@ -15,7 +16,7 @@ export default function App() {
   const [cargando, setCargando] = useState(true);
   const [errorGrave, setErrorGrave] = useState(null);
   const [eligiendoOtra, setEligiendoOtra] = useState(false);
-  const [pantalla, setPantalla] = useState("inicio"); // "inicio" | "perfil"
+  const [pantalla, setPantalla] = useState("inicio"); // "inicio" | "perfil" | "admin:equipo" | "admin:catalogo" | "admin:empresa"
   const [claveAplicada, setClaveAplicada] = useState(null); // persona+empresa para la que ya se decidió la página principal
 
   const olvidarSesion = useCallback(() => {
@@ -105,5 +106,7 @@ export default function App() {
         alSalir={salir}
       />
     );
+  if (pantalla.startsWith("admin:"))
+    return <Administracion yo={yo} seccionInicial={pantalla.slice("admin:".length)} alVolver={() => setPantalla("inicio")} />;
   return <Inicio yo={yo} alAbrir={abrir} alCambiarEmpresa={() => setEligiendoOtra(true)} alSalir={salir} />;
 }
