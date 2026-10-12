@@ -74,8 +74,8 @@ export const DESTINOS = [
     descripcion: "Tomar, enviar a cocina, entregar y cobrar.",
     requiere: "documento:leer",
     servicio: "restaurante",
-    disponible: false,
-    abre: null,
+    disponible: true,
+    abre: { enlace: "restaurante/" },
   },
   {
     id: "restaurante.cocina",

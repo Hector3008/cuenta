@@ -59,11 +59,12 @@ const catalogoDePrueba = [
 
 const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => d.id).sort();
 
-test("accesibles: con el registro real, cada perfil ve lo suyo (aún no hay fronts de servicios)", () => {
+test("accesibles: con el registro real, cada perfil ve lo suyo (Pedidos ya existe; Cocina aún no)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]);
-  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos"]);
-  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "restaurante.pedidos"]);
+  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "restaurante.pedidos"]);
+  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "restaurante.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]); // sin el servicio, sin Pedidos
   assert.deepEqual(ids(yoCon([], [])), ["cuenta.perfil", "empresa.datos"]);
 });
 
@@ -112,7 +113,7 @@ test("resolver: cae a Inicio (null), sin error, si no aplica", () => {
 });
 
 test("resolver: un destino previsto (aún sin pantalla) no se abre aunque esté guardado", () => {
-  assert.equal(resolverPaginaPrincipal(yoCon(["*"], ["restaurante"], { paginaPrincipal: "restaurante.pedidos" })), null);
+  assert.equal(resolverPaginaPrincipal(yoCon(["*"], ["restaurante"], { paginaPrincipal: "restaurante.cocina" })), null);
 });
 
 // ---------- marcas de "ya se abrió" ----------
