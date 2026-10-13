@@ -71,7 +71,7 @@ export const DESTINOS = [
   {
     id: "restaurante.pedidos",
     titulo: "Pedidos",
-    descripcion: "Tomar, enviar a cocina, entregar y cobrar.",
+    descripcion: "Abrir pedidos, pedir ítems, entregar y cobrar.",
     requiere: "documento:leer",
     servicio: "restaurante",
     disponible: true,
@@ -80,11 +80,11 @@ export const DESTINOS = [
   {
     id: "restaurante.cocina",
     titulo: "Cocina",
-    descripcion: "Pedidos en preparación.",
+    descripcion: "Ítems en preparación, uno por tarjeta.",
     requiere: "estacion:cocina",
     servicio: "restaurante",
-    disponible: false,
-    abre: null,
+    disponible: true,
+    abre: { enlace: "restaurante/#cocina" },
   },
 ];
 
