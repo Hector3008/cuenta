@@ -61,22 +61,22 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => 
 
 test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "restaurante.cocina", "restaurante.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "restaurante.cocina", "restaurante.pedidos"]);
   assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "restaurante.pedidos"]);
   assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "restaurante.cocina", "restaurante.pedidos"]);
-  assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]); // sin el servicio, sin Pedidos
+  assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
   assert.deepEqual(ids(yoCon([], [])), ["cuenta.perfil", "empresa.datos"]);
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "restaurante.cocina", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "restaurante.cocina", "restaurante.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "restaurante.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "restaurante.cocina", "restaurante.pedidos"]);
 });
 
 test("accesibles: sin el servicio contratado no hay acceso, ni siquiera con `*`", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]);
-  assert.deepEqual(idsVisibles(yoCon(["*"], [])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"], [])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]);
 });
 
 test("accesibles: un rol propio con permisos sueltos ve exactamente lo que esos permisos habilitan", () => {

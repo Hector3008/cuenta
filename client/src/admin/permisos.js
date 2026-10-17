@@ -26,6 +26,10 @@ export function capacidades(permisos) {
       editar: p("catalogo:editar"),
       baja: p("catalogo:gestionar"),
     },
+    fidelizacion: {
+      ver: p("fidelizacion:canjear") || p("fidelizacion:gestionar"),
+      gestionar: p("fidelizacion:gestionar"),
+    },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
   };
 }
@@ -36,6 +40,7 @@ export function seccionesVisibles(permisos) {
   return [
     { id: "equipo", titulo: "Equipo", visible: c.equipo.ver },
     { id: "catalogo", titulo: "Catálogo", visible: c.catalogo.ver },
+    { id: "fidelizacion", titulo: "Fidelización", visible: c.fidelizacion.ver },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
   ].filter((s) => s.visible);
 }

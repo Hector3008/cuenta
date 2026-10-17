@@ -51,6 +51,15 @@ export const DESTINOS = [
     abre: { pantalla: "admin:catalogo" },
   },
   {
+    id: "empresa.fidelizacion",
+    titulo: "Fidelización",
+    descripcion: "Puntos, niveles y beneficios canjeables.",
+    requiere: "fidelizacion:canjear",
+    servicio: null,
+    disponible: true,
+    abre: { pantalla: "admin:fidelizacion" },
+  },
+  {
     id: "empresa.datos",
     titulo: "Empresa",
     descripcion: "Datos de la empresa y sus roles.",

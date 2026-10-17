@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import { capacidades, empresaActiva, seccionesVisibles } from "./permisos.js";
 import Equipo from "./Equipo.jsx";
 import Catalogo from "./Catalogo.jsx";
+import Fidelizacion from "./Fidelizacion.jsx";
 import Empresa from "./Empresa.jsx";
 import "./admin.css";
 
-// Vista de administración de la empresa: Equipo · Catálogo · Empresa.
+// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Empresa.
 // Props:
 //   yo               lo que devuelve `api.yo()` (ya normalizado)
-//   seccionInicial   "equipo" | "catalogo" | "empresa" (viene del destino que abrió la pantalla)
+//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "empresa" (viene del destino que abrió la pantalla)
 //   alVolver         vuelve a Inicio
 // Sin enrutador (como el resto de `cuenta`): la pestaña vive en el estado. Solo se ofrecen las
 // secciones que la persona puede ver; los botones de CRUD salen de `capacidades`.
@@ -44,6 +45,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
       <div role="tabpanel">
         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
+        {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
         {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} />}
       </div>
     </main>
