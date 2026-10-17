@@ -15,6 +15,35 @@ export function formatoPrecio(precio, moneda) {
   }
 }
 
+// Descripción y foto del plato (5.25, 5.29): viven en los atributos `DESCRIPCION` e `IMAGEN` del ítem.
+// El núcleo admite hasta 500 caracteres por texto (5.16) y la carta pública solo muestra una foto cuya
+// URL sea https absoluta, sin credenciales y de hasta 500 caracteres: aquí se valida lo mismo antes de
+// enviar, para no guardar una foto que la carta luego descartaría en silencio.
+export const MAX_DESCRIPCION = 500;
+export const MAX_IMAGEN = 500;
+
+export function parsearDescripcion(texto) {
+  const t = String(texto ?? "").trim();
+  if (t === "") return { ok: true, valor: null };
+  if (t.length > MAX_DESCRIPCION) return { ok: false };
+  return { ok: true, valor: t };
+}
+
+// Vacío = sin foto. Ruta absoluta (no se suben archivos): solo https, sin usuario ni contraseña.
+export function parsearImagen(texto) {
+  const t = String(texto ?? "").trim();
+  if (t === "") return { ok: true, valor: null };
+  if (t.length > MAX_IMAGEN || /\s/.test(t)) return { ok: false };
+  let u;
+  try {
+    u = new URL(t);
+  } catch {
+    return { ok: false };
+  }
+  if (u.protocol !== "https:" || !u.hostname || u.username || u.password) return { ok: false };
+  return { ok: true, valor: t };
+}
+
 // El núcleo rechaza más de 2 decimales (5.16): se valida antes de enviar.
 export function parsearPrecio(texto) {
   const t = String(texto ?? "").trim().replace(",", ".");

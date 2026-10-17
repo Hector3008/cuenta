@@ -56,4 +56,17 @@ export function Campo({ etiqueta, children, ayuda }) {
   );
 }
 
-export { formatoPrecio, parsearPrecio } from "./formato.js";
+// Foto de un plato por URL absoluta. Si no carga, muestra un recuadro con el motivo en vez de un ícono roto.
+export function FotoPlato({ url, alt = "", className = "adm-foto" }) {
+  const [fallo, setFallo] = useState(false);
+  const [previa, setPrevia] = useState(url);
+  if (previa !== url) {
+    setPrevia(url);
+    setFallo(false);
+  }
+  if (!url) return <div className={`${className} adm-foto--vacia`}>Sin foto</div>;
+  if (fallo) return <div className={`${className} adm-foto--vacia`} role="img" aria-label="No se pudo cargar la foto">No carga</div>;
+  return <img className={className} src={url} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setFallo(true)} />;
+}
+
+export { formatoPrecio, parsearPrecio, parsearDescripcion, parsearImagen, MAX_DESCRIPCION, MAX_IMAGEN } from "./formato.js";

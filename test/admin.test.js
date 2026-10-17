@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DESTINOS, permite } from "../client/src/destinos.js";
 import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
-import { parsearPrecio, formatoPrecio } from "../client/src/admin/formato.js";
+import { parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
 
 // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
 globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
@@ -93,4 +93,33 @@ test("mensajeAdmin: un 401 es sesión caducada (no «contraseña incorrecta») y
   assert.equal(mensajeAdmin(new ErrorApi(0, "SIN_CONEXION", "No se pudo conectar con el servidor.")), "No se pudo conectar con el servidor.");
   assert.match(mensajeAdmin(new ErrorApi(500, null, "boom")), /problema/);
   assert.match(mensajeAdmin(new Error("otra cosa")), /inesperado/);
+});
+
+test("parsearDescripcion: vacío = sin descripción, recorta espacios y topa en 500", () => {
+  assert.deepEqual(parsearDescripcion(""), { ok: true, valor: null });
+  assert.deepEqual(parsearDescripcion("   "), { ok: true, valor: null });
+  assert.deepEqual(parsearDescripcion(undefined), { ok: true, valor: null });
+  assert.deepEqual(parsearDescripcion("  Pan con palta \n y huevo "), { ok: true, valor: "Pan con palta \n y huevo" });
+  assert.equal(parsearDescripcion("a".repeat(MAX_DESCRIPCION)).ok, true);
+  assert.equal(parsearDescripcion("a".repeat(MAX_DESCRIPCION + 1)).ok, false);
+});
+
+test("parsearImagen: solo URL https absoluta, sin credenciales ni espacios, hasta 500", () => {
+  assert.deepEqual(parsearImagen(""), { ok: true, valor: null });
+  assert.deepEqual(parsearImagen("  https://cdn.ejemplo.com/platos/lomo.jpg?v=2 "), { ok: true, valor: "https://cdn.ejemplo.com/platos/lomo.jpg?v=2" });
+  const malas = [
+    "http://cdn.ejemplo.com/a.jpg",
+    "javascript:alert(1)",
+    "data:image/png;base64,AAAA",
+    "//cdn.ejemplo.com/a.jpg",
+    "/img/lomo.jpg",
+    "img/lomo.jpg",
+    "C:\\fotos\\lomo.jpg",
+    "https://user:clave@cdn.ejemplo.com/a.jpg",
+    "https://user@cdn.ejemplo.com/a.jpg",
+    "https://cdn.ejemplo.com/mi foto.jpg",
+    "https://",
+    "https://cdn.ejemplo.com/" + "a".repeat(MAX_IMAGEN),
+  ];
+  for (const m of malas) assert.equal(parsearImagen(m).ok, false, m);
 });
