@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, comoLista, mensajeAdmin } from "./http.js";
-import { Aviso, BotonConfirmar, Campo, FotoPlato, MAX_DESCRIPCION, MAX_IMAGEN, formatoPrecio, parsearDescripcion, parsearImagen, parsearPrecio } from "./piezas.jsx";
+import { Aviso, BotonConfirmar, Campo, FotoPlato, MAX_DESCRIPCION, MAX_IMAGEN, esEnlaceDeDrive, formatoPrecio, parsearDescripcion, parsearImagen, parsearPrecio } from "./piezas.jsx";
 
 // Sección Catálogo (5.16): búsqueda por código o nombre, filtro por categoría,
 // alta, edición (el código no cambia) y baja/reactivación. Desde 5.29 también la descripción y la foto
@@ -193,7 +193,7 @@ export default function Catalogo({ cap, moneda }) {
           <Campo etiqueta="Descripción del plato (opcional)" ayuda={`Lo que ve el cliente en la carta. ${formulario.datos.descripcion.length}/${MAX_DESCRIPCION}`}>
             <textarea rows={3} maxLength={MAX_DESCRIPCION} value={formulario.datos.descripcion} onChange={campo("descripcion")} />
           </Campo>
-          <Campo etiqueta="Foto (opcional)" ayuda="Dirección completa de la imagen, que empiece con https://. No se suben archivos. Vacío = sin foto.">
+          <Campo etiqueta="Foto (opcional)" ayuda={esEnlaceDeDrive(formulario.datos.imagen) ? "Enlace de Google Drive: se guardará como dirección directa de la imagen. El archivo debe estar compartido con «Cualquier persona con el enlace»." : "Dirección completa de la imagen, que empiece con https://. No se suben archivos. Vacío = sin foto."}>
             <input type="url" inputMode="url" maxLength={MAX_IMAGEN} placeholder="https://…" value={formulario.datos.imagen} onChange={campo("imagen")} />
           </Campo>
           <VistaPrevia datos={formulario.datos} moneda={moneda} />

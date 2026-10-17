@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DESTINOS, permite } from "../client/src/destinos.js";
 import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
-import { parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+import { parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
 
 // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
 globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
@@ -122,4 +122,27 @@ test("parsearImagen: solo URL https absoluta, sin credenciales ni espacios, hast
     "https://cdn.ejemplo.com/" + "a".repeat(MAX_IMAGEN),
   ];
   for (const m of malas) assert.equal(parsearImagen(m).ok, false, m);
+});
+
+test("enlaces de Google Drive: se convierten a la miniatura directa; lo demás queda igual", () => {
+  const id = "1uwFex1na_py4Pr1VWPrZKsMDjTEqdALT";
+  const directo = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+  for (const e of [
+    `https://drive.google.com/file/d/${id}/view?usp=sharing`,
+    `https://drive.google.com/file/d/${id}/view`,
+    `https://drive.google.com/file/d/${id}`,
+    `  https://drive.google.com/open?id=${id} `,
+    `https://drive.google.com/uc?export=view&id=${id}`,
+  ]) {
+    assert.equal(normalizarImagen(e), directo, e);
+    assert.deepEqual(parsearImagen(e), { ok: true, valor: directo }, e);
+    assert.equal(esEnlaceDeDrive(e), true, e);
+  }
+  for (const e of ["", "https://cdn.ejemplo.com/a.jpg", "https://drive.google.com/drive/folders/" + id, "https://drive.google.com/file/d/corto/view", "http://drive.google.com/file/d/" + id + "/view", "https://drive.google.com.falso.test/file/d/" + id + "/view"]) {
+    assert.equal(normalizarImagen(e), e.trim(), e);
+    assert.equal(esEnlaceDeDrive(e), false, e);
+  }
+  // el resultado sigue cumpliendo las reglas de la carta: https, sin credenciales, sin espacios, <= 500
+  assert.equal(parsearImagen("https://drive.google.com/file/d/corto/view").ok, true); // https válido, aunque Drive no lo servirá
+  assert.equal(parsearImagen("http://drive.google.com/file/d/" + id + "/view").ok, false);
 });

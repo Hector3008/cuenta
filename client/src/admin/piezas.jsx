@@ -69,4 +69,4 @@ export function FotoPlato({ url, alt = "", className = "adm-foto" }) {
   return <img className={className} src={url} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setFallo(true)} />;
 }
 
-export { formatoPrecio, parsearPrecio, parsearDescripcion, parsearImagen, MAX_DESCRIPCION, MAX_IMAGEN } from "./formato.js";
+export { formatoPrecio, parsearPrecio, parsearDescripcion, parsearImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "./formato.js";

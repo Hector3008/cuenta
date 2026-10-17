@@ -29,9 +29,29 @@ export function parsearDescripcion(texto) {
   return { ok: true, valor: t };
 }
 
+// Un enlace de «compartir» de Google Drive (drive.google.com/file/d/<id>/view, /open?id=<id>, /uc?id=<id>)
+// abre la página de Drive, no la imagen: en un <img> no se ve. Se convierte a la dirección de miniatura
+// directa, que sí sirve la imagen si el archivo está compartido con «Cualquier persona con el enlace».
+// Cualquier otra dirección se devuelve igual.
+export function normalizarImagen(texto) {
+  const t = String(texto ?? "").trim();
+  let u;
+  try {
+    u = new URL(t);
+  } catch {
+    return t;
+  }
+  if (u.protocol !== "https:" || u.hostname !== "drive.google.com") return t;
+  const id = u.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]{10,})(?:\/|$)/)?.[1] ?? (/^\/(?:open|uc)$/.test(u.pathname) ? u.searchParams.get("id") : null);
+  if (!id || !/^[A-Za-z0-9_-]{10,}$/.test(id)) return t;
+  return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+}
+
+export const esEnlaceDeDrive = (texto) => normalizarImagen(texto) !== String(texto ?? "").trim();
+
 // Vacío = sin foto. Ruta absoluta (no se suben archivos): solo https, sin usuario ni contraseña.
 export function parsearImagen(texto) {
-  const t = String(texto ?? "").trim();
+  const t = normalizarImagen(texto);
   if (t === "") return { ok: true, valor: null };
   if (t.length > MAX_IMAGEN || /\s/.test(t)) return { ok: false };
   let u;
