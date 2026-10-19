@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DESTINOS, permite } from "../client/src/destinos.js";
 import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
-import { parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+import { parsearDatos, formularioDeDatos, lineasDeEncabezado, parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
 
 // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
 globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
@@ -254,4 +254,36 @@ test("estiloDeVista deja pasar solo variables --color-* con #rrggbb", () => {
   assert.deepEqual(estiloDeVista({ colores: { "--color-principal": "#8b1e3f", "--color-fondo": "red; x:y", "--otra": "#000000", "--color-texto": "#1D211F" } }), { "--color-principal": "#8b1e3f", "--color-texto": "#1D211F" });
   assert.deepEqual(estiloDeVista(null), {});
   assert.deepEqual(estiloDeVista({ colores: null }), {});
+});
+
+test("los datos para los recibos los gestiona quien tiene empresa:datos", () => {
+  assert.equal(capacidades(["*"]).datos.gestionar, true);
+  assert.equal(capacidades(["empresa:datos"]).datos.gestionar, true);
+  assert.equal(capacidades(["empresa:marca"]).datos.gestionar, false);
+  assert.equal(capacidades([]).datos.gestionar, false);
+});
+
+test("parsearDatos: recorta, junta espacios, pone el RUC en mayúsculas y envía null en lo vacío", () => {
+  assert.deepEqual(parsearDatos({ razonSocial: "  Café   Central SAC ", idFiscal: "20123456789", direccion: " Av. 1 ", telefono: "+51 999 111 222", pie: "Gracias" }), { ok: true, cuerpo: { razonSocial: "Café Central SAC", idFiscal: "20123456789", direccion: "Av. 1", telefono: "+51 999 111 222", pie: "Gracias" } });
+  assert.equal(parsearDatos({ idFiscal: "ab-1234.5" }).cuerpo.idFiscal, "AB-1234.5");
+  assert.deepEqual(parsearDatos({}), { ok: true, cuerpo: { razonSocial: null, idFiscal: null, direccion: null, telefono: null, pie: null } });
+});
+
+test("parsearDatos rechaza lo que el núcleo rechazaría y dice qué campo", () => {
+  assert.match(parsearDatos({ razonSocial: "a".repeat(81) }).error, /Razón social/);
+  assert.match(parsearDatos({ idFiscal: "123" }).error, /RUC/);
+  assert.match(parsearDatos({ idFiscal: "12 345 678" }).error, /RUC/);
+  assert.match(parsearDatos({ telefono: "llamar" }).error, /Teléfono/);
+  assert.match(parsearDatos({ pie: "p".repeat(121) }).error, /Pie/);
+  assert.match(parsearDatos({ direccion: "d".repeat(121) }).error, /Dirección/);
+});
+
+test("formularioDeDatos es la ida y vuelta de parsearDatos y lineasDeEncabezado sigue la regla del recibo", () => {
+  const datos = { razonSocial: "Café Central SAC", idFiscal: "20123456789", direccion: null, telefono: "999", pie: null };
+  const f = formularioDeDatos(datos);
+  assert.deepEqual(f, { razonSocial: "Café Central SAC", idFiscal: "20123456789", direccion: "", telefono: "999", pie: "" });
+  assert.deepEqual(parsearDatos(f).cuerpo, datos);
+  assert.deepEqual(lineasDeEncabezado({ nombre: "Café Central", razonSocial: "Café Central SAC", idFiscal: "2012", etiquetaIdFiscal: "RUC", direccion: "Av. 1", telefono: "999" }), ["Café Central SAC", "RUC: 2012", "Av. 1", "Tel: 999"]);
+  assert.deepEqual(lineasDeEncabezado({ nombre: "Café", razonSocial: " café ", idFiscal: "AB-12345", etiquetaIdFiscal: "ID fiscal" }), ["ID fiscal: AB-12345"]);
+  assert.deepEqual(lineasDeEncabezado(null), []);
 });

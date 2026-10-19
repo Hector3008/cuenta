@@ -32,6 +32,7 @@ export function capacidades(permisos) {
     },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
+    datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
   };
 }
 

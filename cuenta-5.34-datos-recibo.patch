@@ -1,0 +1,280 @@
+diff --git a/client/src/admin/Administracion.jsx b/client/src/admin/Administracion.jsx
+index 98e64b6..3215452 100644
+--- a/client/src/admin/Administracion.jsx
++++ b/client/src/admin/Administracion.jsx
+@@ -46,7 +46,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
+         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
+         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
+         {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
+-        {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} />}
++        {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} capDatos={cap.datos} />}
+       </div>
+     </main>
+   );
+diff --git a/client/src/admin/DatosEmpresa.jsx b/client/src/admin/DatosEmpresa.jsx
+new file mode 100644
+index 0000000..4f21ab9
+--- /dev/null
++++ b/client/src/admin/DatosEmpresa.jsx
+@@ -0,0 +1,96 @@
++import { useCallback, useEffect, useState } from "react";
++import { api, mensajeAdmin } from "./http.js";
++import { Aviso, Campo } from "./piezas.jsx";
++import { CAMPOS_DATOS, LIMITES_DATOS, formularioDeDatos, lineasDeEncabezado, parsearDatos } from "./formato.js";
++
++// Datos de la empresa para sus comprobantes (5.34): salen en el encabezado y el pie del recibo de pago y de la cuenta
++// (junto al logo de la marca). El recibo es un documento NO fiscal: estos datos se imprimen tal cual se escriben.
++
++function VistaEncabezado({ vista }) {
++  if (!vista) return null;
++  const lineas = lineasDeEncabezado(vista);
++  return (
++    <div className="adm-recibo-vista" aria-label="Encabezado del recibo">
++      {vista.logo && <img className="adm-marca-logo" src={vista.logo} alt={`Logo de ${vista.nombre}`} referrerPolicy="no-referrer" />}
++      <strong>{vista.nombre}</strong>
++      {lineas.map((l, i) => (<span key={i}>{l}</span>))}
++      <span className="adm-recibo-vista__linea">— — — — — — — —</span>
++      <span>1 × Café americano · S/ 6.50</span>
++      <strong>Total S/ 6.50</strong>
++      {vista.pie && <span className="adm-recibo-vista__pie">{vista.pie}</span>}
++      <small>Documento no fiscal</small>
++    </div>
++  );
++}
++
++export default function DatosEmpresa() {
++  const [vista, setVista] = useState(null);
++  const [formulario, setFormulario] = useState(formularioDeDatos(null));
++  const [cargando, setCargando] = useState(true);
++  const [error, setError] = useState("");
++  const [ok, setOk] = useState("");
++  const [guardando, setGuardando] = useState(false);
++
++  const aplicar = useCallback((r) => {
++    setFormulario(formularioDeDatos(r?.datos));
++    setVista(r?.vista ?? null);
++  }, []);
++
++  useEffect(() => {
++    let vigente = true;
++    api.get("auth/datos-empresa").then(
++      (r) => vigente && (aplicar(r), setCargando(false)),
++      (e) => vigente && (setError(mensajeAdmin(e)), setCargando(false)),
++    );
++    return () => {
++      vigente = false;
++    };
++  }, [aplicar]);
++
++  async function guardar(ev) {
++    ev.preventDefault();
++    setOk("");
++    const p = parsearDatos(formulario);
++    if (!p.ok) return setError(p.error);
++    setError("");
++    setGuardando(true);
++    try {
++      aplicar(await api.put("auth/datos-empresa", p.cuerpo));
++      setOk("Datos guardados. Saldrán en los recibos que se emitan desde ahora.");
++    } catch (err) {
++      setError(mensajeAdmin(err));
++    } finally {
++      setGuardando(false);
++    }
++  }
++
++  if (cargando) return <p className="cargando">Cargando los datos del comprobante…</p>;
++  return (
++    <section aria-labelledby="t-datos">
++      <header className="adm-cabecera"><h3 id="t-datos">Datos para los recibos</h3></header>
++      <p className="adm-nota">
++        Salen en el encabezado y el pie del recibo de pago y de la cuenta, junto al logo de la marca. Los recibos ya emitidos conservan los datos que tenían.
++        Son recibos no fiscales: no reemplazan una factura o boleta electrónica.
++      </p>
++      <Aviso onCerrar={() => setError("")}>{error}</Aviso>
++      <Aviso tipo="ok" onCerrar={() => setOk("")}>{ok}</Aviso>
++      <div className="adm-marca">
++        <form className="adm-form" onSubmit={guardar}>
++          {CAMPOS_DATOS.map(([k, etiqueta, ayuda]) => (
++            <Campo key={k} etiqueta={etiqueta} ayuda={ayuda}>
++              <input value={formulario[k]} maxLength={LIMITES_DATOS[k]} onChange={(e) => setFormulario((f) => ({ ...f, [k]: e.target.value }))} inputMode={k === "telefono" ? "tel" : undefined} />
++            </Campo>
++          ))}
++          <div className="adm-acciones">
++            <button type="submit" className="adm-btn adm-btn--primario" disabled={guardando}>{guardando ? "Guardando…" : "Guardar datos"}</button>
++          </div>
++        </form>
++        <div>
++          <h4 className="adm-marca-sub">Así sale en el recibo</h4>
++          <VistaEncabezado vista={vista} />
++          <p className="adm-nota">Muestra lo último que guardaste. El logo se edita en «Marca de la carta».</p>
++        </div>
++      </div>
++    </section>
++  );
++}
+diff --git a/client/src/admin/Empresa.jsx b/client/src/admin/Empresa.jsx
+index d0aa04a..6bd9001 100644
+--- a/client/src/admin/Empresa.jsx
++++ b/client/src/admin/Empresa.jsx
+@@ -4,6 +4,7 @@ import { Aviso, BotonConfirmar, Campo } from "./piezas.jsx";
+ import { normalizarRol } from "./Equipo.jsx";
+ import { empresaActiva } from "./permisos.js";
+ import Marca from "./Marca.jsx";
++import DatosEmpresa from "./DatosEmpresa.jsx";
+ 
+ // Sección Empresa: datos básicos (solo lectura: aún no hay ruta para editar la
+ // empresa, 5.20/5.10) y roles de la empresa con CRUD si hay `rol:gestionar` (5.14).
+@@ -20,7 +21,7 @@ export function parsearPermisos(texto) {
+ 
+ const VACIO = { nombre: "", permisos: "" };
+ 
+-export default function Empresa({ yo, capRoles, capMarca = {} }) {
++export default function Empresa({ yo, capRoles, capMarca = {}, capDatos = {} }) {
+   const [roles, setRoles] = useState([]);
+   const [cargando, setCargando] = useState(false);
+   const [error, setError] = useState("");
+@@ -90,10 +91,11 @@ export default function Empresa({ yo, capRoles, capMarca = {} }) {
+       </dl>
+       <p className="adm-nota">
+         El nombre, el país y la moneda de la empresa todavía no se pueden editar desde aquí: se cambian por código.
+-        La marca de la carta (logo, eslogan y colores) sí se edita abajo, si tu rol lo permite.
++        La marca de la carta (logo, eslogan y colores) y los datos de los recibos sí se editan abajo, si tu rol lo permite.
+       </p>
+ 
+       {capMarca.gestionar && <Marca nombre={empresa.nombre} />}
++      {capDatos.gestionar && <DatosEmpresa />}
+ 
+       {capRoles.ver && (
+         <>
+diff --git a/client/src/admin/admin.css b/client/src/admin/admin.css
+index 8907ae5..ab83451 100644
+--- a/client/src/admin/admin.css
++++ b/client/src/admin/admin.css
+@@ -68,3 +68,10 @@
+ .adm-marca-fila { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+ .adm-marca-boton { padding: 6px 12px; border-radius: 8px; font-size: .875rem; background: var(--color-principal); color: var(--color-principal-texto); }
+ .adm-marca-puntos { font-weight: 700; }
++
++/* Datos para los recibos (5.34) */
++.adm-recibo-vista { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 16px; background: #fff; color: #111; border: 1px solid var(--color-borde); border-radius: 6px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .8125rem; }
++.adm-recibo-vista .adm-marca-logo { margin-bottom: 6px; }
++.adm-recibo-vista__linea { color: #888; }
++.adm-recibo-vista__pie { margin-top: 6px; }
++.adm-recibo-vista small { margin-top: 6px; color: #555; }
+diff --git a/client/src/admin/formato.js b/client/src/admin/formato.js
+index c1f2657..cd602ef 100644
+--- a/client/src/admin/formato.js
++++ b/client/src/admin/formato.js
+@@ -235,3 +235,50 @@ export function estiloDeVista(vista) {
+   if (!c || typeof c !== "object") return {};
+   return Object.fromEntries(Object.entries(c).filter(([k, v]) => /^--color-[a-z-]+$/.test(k) && /^#[0-9a-f]{6}$/i.test(String(v))));
+ }
++
++// Datos de la empresa para sus comprobantes (5.34): razón social, RUC o identificación fiscal, dirección,
++// teléfono y un pie de página. Aquí solo se valida el formato; el núcleo valida de verdad.
++export const LIMITES_DATOS = { razonSocial: 80, idFiscal: 20, direccion: 120, telefono: 30, pie: 120 };
++
++/** Del formulario (todo texto) al cuerpo de `PUT /auth/datos-empresa`; cada campo vacío se envía como null (= quitar). */
++export function parsearDatos(f) {
++  const cuerpo = {};
++  for (const [campo, tope] of Object.entries(LIMITES_DATOS)) {
++    const t = String(f?.[campo] ?? "").trim().replace(/\s+/g, " ");
++    if (t === "") {
++      cuerpo[campo] = null;
++      continue;
++    }
++    if (t.length > tope) return { ok: false, error: `${ETIQUETA_DATO[campo]}: hasta ${tope} caracteres.` };
++    if (campo === "idFiscal" && (t.length < 5 || !/^[A-Za-z0-9][A-Za-z0-9./-]*$/.test(t))) return { ok: false, error: "RUC o identificación fiscal: de 5 a 20 letras o números (también . - /), sin espacios." };
++    if (campo === "telefono" && !/^[0-9+][0-9 ()+-]*$/.test(t)) return { ok: false, error: "Teléfono: solo números, espacios y + - ( )." };
++    cuerpo[campo] = campo === "idFiscal" ? t.toUpperCase() : t;
++  }
++  return { ok: true, cuerpo };
++}
++
++const ETIQUETA_DATO = { razonSocial: "Razón social", idFiscal: "RUC o identificación fiscal", direccion: "Dirección", telefono: "Teléfono", pie: "Pie del recibo" };
++export const CAMPOS_DATOS = [
++  ["razonSocial", "Razón social", "El nombre legal de la empresa, si es distinto del nombre de la carta."],
++  ["idFiscal", "RUC o identificación fiscal", "Se imprime tal cual. No se verifica con ninguna autoridad."],
++  ["direccion", "Dirección", "La del local."],
++  ["telefono", "Teléfono", "Para consultas sobre el recibo."],
++  ["pie", "Pie del recibo", "Una línea al final, por ejemplo «Gracias por tu visita»."],
++];
++
++/** Los datos guardados (de `GET /auth/datos-empresa`) → valores del formulario. */
++export function formularioDeDatos(datos) {
++  const d = datos ?? {};
++  return Object.fromEntries(Object.keys(LIMITES_DATOS).map((k) => [k, d[k] ?? ""]));
++}
++
++/** Las líneas del encabezado tal como salen en el recibo (misma regla que el recibo del restaurante). */
++export function lineasDeEncabezado(vista) {
++  if (!vista) return [];
++  const l = [];
++  if (vista.razonSocial && vista.razonSocial.trim().toLowerCase() !== String(vista.nombre ?? "").trim().toLowerCase()) l.push(vista.razonSocial);
++  if (vista.idFiscal) l.push(`${vista.etiquetaIdFiscal === "ID fiscal" ? "ID fiscal" : "RUC"}: ${vista.idFiscal}`);
++  if (vista.direccion) l.push(vista.direccion);
++  if (vista.telefono) l.push(`Tel: ${vista.telefono}`);
++  return l;
++}
+diff --git a/client/src/admin/permisos.js b/client/src/admin/permisos.js
+index 0a0be4c..8d4c3d4 100644
+--- a/client/src/admin/permisos.js
++++ b/client/src/admin/permisos.js
+@@ -32,6 +32,7 @@ export function capacidades(permisos) {
+     },
+     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
+     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
++    datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
+   };
+ }
+ 
+diff --git a/test/admin.test.js b/test/admin.test.js
+index 7458020..0d405a4 100644
+--- a/test/admin.test.js
++++ b/test/admin.test.js
+@@ -2,7 +2,7 @@ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { DESTINOS, permite } from "../client/src/destinos.js";
+ import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
+-import { parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
++import { parsearDatos, formularioDeDatos, lineasDeEncabezado, parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+ 
+ // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
+ globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
+@@ -255,3 +255,35 @@ test("estiloDeVista deja pasar solo variables --color-* con #rrggbb", () => {
+   assert.deepEqual(estiloDeVista(null), {});
+   assert.deepEqual(estiloDeVista({ colores: null }), {});
+ });
++
++test("los datos para los recibos los gestiona quien tiene empresa:datos", () => {
++  assert.equal(capacidades(["*"]).datos.gestionar, true);
++  assert.equal(capacidades(["empresa:datos"]).datos.gestionar, true);
++  assert.equal(capacidades(["empresa:marca"]).datos.gestionar, false);
++  assert.equal(capacidades([]).datos.gestionar, false);
++});
++
++test("parsearDatos: recorta, junta espacios, pone el RUC en mayúsculas y envía null en lo vacío", () => {
++  assert.deepEqual(parsearDatos({ razonSocial: "  Café   Central SAC ", idFiscal: "20123456789", direccion: " Av. 1 ", telefono: "+51 999 111 222", pie: "Gracias" }), { ok: true, cuerpo: { razonSocial: "Café Central SAC", idFiscal: "20123456789", direccion: "Av. 1", telefono: "+51 999 111 222", pie: "Gracias" } });
++  assert.equal(parsearDatos({ idFiscal: "ab-1234.5" }).cuerpo.idFiscal, "AB-1234.5");
++  assert.deepEqual(parsearDatos({}), { ok: true, cuerpo: { razonSocial: null, idFiscal: null, direccion: null, telefono: null, pie: null } });
++});
++
++test("parsearDatos rechaza lo que el núcleo rechazaría y dice qué campo", () => {
++  assert.match(parsearDatos({ razonSocial: "a".repeat(81) }).error, /Razón social/);
++  assert.match(parsearDatos({ idFiscal: "123" }).error, /RUC/);
++  assert.match(parsearDatos({ idFiscal: "12 345 678" }).error, /RUC/);
++  assert.match(parsearDatos({ telefono: "llamar" }).error, /Teléfono/);
++  assert.match(parsearDatos({ pie: "p".repeat(121) }).error, /Pie/);
++  assert.match(parsearDatos({ direccion: "d".repeat(121) }).error, /Dirección/);
++});
++
++test("formularioDeDatos es la ida y vuelta de parsearDatos y lineasDeEncabezado sigue la regla del recibo", () => {
++  const datos = { razonSocial: "Café Central SAC", idFiscal: "20123456789", direccion: null, telefono: "999", pie: null };
++  const f = formularioDeDatos(datos);
++  assert.deepEqual(f, { razonSocial: "Café Central SAC", idFiscal: "20123456789", direccion: "", telefono: "999", pie: "" });
++  assert.deepEqual(parsearDatos(f).cuerpo, datos);
++  assert.deepEqual(lineasDeEncabezado({ nombre: "Café Central", razonSocial: "Café Central SAC", idFiscal: "2012", etiquetaIdFiscal: "RUC", direccion: "Av. 1", telefono: "999" }), ["Café Central SAC", "RUC: 2012", "Av. 1", "Tel: 999"]);
++  assert.deepEqual(lineasDeEncabezado({ nombre: "Café", razonSocial: " café ", idFiscal: "AB-12345", etiquetaIdFiscal: "ID fiscal" }), ["ID fiscal: AB-12345"]);
++  assert.deepEqual(lineasDeEncabezado(null), []);
++});

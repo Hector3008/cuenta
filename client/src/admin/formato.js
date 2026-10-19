@@ -235,3 +235,50 @@ export function estiloDeVista(vista) {
   if (!c || typeof c !== "object") return {};
   return Object.fromEntries(Object.entries(c).filter(([k, v]) => /^--color-[a-z-]+$/.test(k) && /^#[0-9a-f]{6}$/i.test(String(v))));
 }
+
+// Datos de la empresa para sus comprobantes (5.34): razón social, RUC o identificación fiscal, dirección,
+// teléfono y un pie de página. Aquí solo se valida el formato; el núcleo valida de verdad.
+export const LIMITES_DATOS = { razonSocial: 80, idFiscal: 20, direccion: 120, telefono: 30, pie: 120 };
+
+/** Del formulario (todo texto) al cuerpo de `PUT /auth/datos-empresa`; cada campo vacío se envía como null (= quitar). */
+export function parsearDatos(f) {
+  const cuerpo = {};
+  for (const [campo, tope] of Object.entries(LIMITES_DATOS)) {
+    const t = String(f?.[campo] ?? "").trim().replace(/\s+/g, " ");
+    if (t === "") {
+      cuerpo[campo] = null;
+      continue;
+    }
+    if (t.length > tope) return { ok: false, error: `${ETIQUETA_DATO[campo]}: hasta ${tope} caracteres.` };
+    if (campo === "idFiscal" && (t.length < 5 || !/^[A-Za-z0-9][A-Za-z0-9./-]*$/.test(t))) return { ok: false, error: "RUC o identificación fiscal: de 5 a 20 letras o números (también . - /), sin espacios." };
+    if (campo === "telefono" && !/^[0-9+][0-9 ()+-]*$/.test(t)) return { ok: false, error: "Teléfono: solo números, espacios y + - ( )." };
+    cuerpo[campo] = campo === "idFiscal" ? t.toUpperCase() : t;
+  }
+  return { ok: true, cuerpo };
+}
+
+const ETIQUETA_DATO = { razonSocial: "Razón social", idFiscal: "RUC o identificación fiscal", direccion: "Dirección", telefono: "Teléfono", pie: "Pie del recibo" };
+export const CAMPOS_DATOS = [
+  ["razonSocial", "Razón social", "El nombre legal de la empresa, si es distinto del nombre de la carta."],
+  ["idFiscal", "RUC o identificación fiscal", "Se imprime tal cual. No se verifica con ninguna autoridad."],
+  ["direccion", "Dirección", "La del local."],
+  ["telefono", "Teléfono", "Para consultas sobre el recibo."],
+  ["pie", "Pie del recibo", "Una línea al final, por ejemplo «Gracias por tu visita»."],
+];
+
+/** Los datos guardados (de `GET /auth/datos-empresa`) → valores del formulario. */
+export function formularioDeDatos(datos) {
+  const d = datos ?? {};
+  return Object.fromEntries(Object.keys(LIMITES_DATOS).map((k) => [k, d[k] ?? ""]));
+}
+
+/** Las líneas del encabezado tal como salen en el recibo (misma regla que el recibo del restaurante). */
+export function lineasDeEncabezado(vista) {
+  if (!vista) return [];
+  const l = [];
+  if (vista.razonSocial && vista.razonSocial.trim().toLowerCase() !== String(vista.nombre ?? "").trim().toLowerCase()) l.push(vista.razonSocial);
+  if (vista.idFiscal) l.push(`${vista.etiquetaIdFiscal === "ID fiscal" ? "ID fiscal" : "RUC"}: ${vista.idFiscal}`);
+  if (vista.direccion) l.push(vista.direccion);
+  if (vista.telefono) l.push(`Tel: ${vista.telefono}`);
+  return l;
+}

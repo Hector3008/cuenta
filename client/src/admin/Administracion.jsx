@@ -46,7 +46,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
         {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
-        {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} />}
+        {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} capDatos={cap.datos} />}
       </div>
     </main>
   );
