@@ -170,3 +170,68 @@ export function formularioDeReto(r) {
   const { puntos: _puntos, ...resto } = formularioDeBeneficio(r);
   return { ...resto, categoria: r?.categoria ?? "" };
 }
+
+// Marca de la empresa (5.33): logo, eslogan y tres colores que se ven en la carta pública. Aquí solo se
+// valida el formato antes de enviar; qué combinaciones de color se aceptan (contraste, fondo ilegible)
+// lo decide el núcleo y su mensaje se muestra tal cual.
+export const MAX_ESLOGAN = 80;
+const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/** "#ABC", "abc" o "#aabbcc" → "#aabbcc"; null si no es un color. Vacío no es un color (se trata aparte). */
+export function normalizarColorEntrada(texto) {
+  const t = String(texto ?? "").trim();
+  const conAlmohadilla = /^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(t) ? `#${t}` : t;
+  if (!HEX.test(conAlmohadilla)) return null;
+  const h = conAlmohadilla.slice(1).toLowerCase();
+  return `#${h.length === 3 ? [...h].map((c) => c + c).join("") : h}`;
+}
+
+export const CAMPOS_COLOR = [
+  ["colorPrincipal", "Color principal", "Botones, puntos y barras de avance."],
+  ["colorSecundario", "Color de acento", "Estrellas y detalles."],
+  ["colorFondo", "Color de fondo", "Fondo de la carta. Si es oscuro, el texto se vuelve claro."],
+];
+
+/**
+ * Del formulario (todo texto) al cuerpo de `PUT /auth/marca`. Cada campo vacío se envía como null (= quitar).
+ * Devuelve { ok: true, cuerpo } o { ok: false, error }.
+ */
+export function parsearMarca(f) {
+  const cuerpo = {};
+  const logo = parsearImagen(f?.logo);
+  if (!logo.ok) return { ok: false, error: "El logo debe ser una dirección que empiece con https://, sin espacios y de hasta 500 caracteres." };
+  cuerpo.logo = logo.valor;
+  const eslogan = String(f?.eslogan ?? "").trim().replace(/\s+/g, " ");
+  if (eslogan.length > MAX_ESLOGAN) return { ok: false, error: `El eslogan puede tener hasta ${MAX_ESLOGAN} caracteres.` };
+  cuerpo.eslogan = eslogan === "" ? null : eslogan;
+  for (const [campo, etiqueta] of CAMPOS_COLOR) {
+    const t = String(f?.[campo] ?? "").trim();
+    if (t === "") {
+      cuerpo[campo] = null;
+      continue;
+    }
+    const c = normalizarColorEntrada(t);
+    if (!c) return { ok: false, error: `${etiqueta}: escribe un color como #8b1e3f o déjalo vacío.` };
+    cuerpo[campo] = c;
+  }
+  return { ok: true, cuerpo };
+}
+
+/** La marca guardada (de `GET /auth/marca`) → valores del formulario. */
+export function formularioDeMarca(marca) {
+  const m = marca ?? {};
+  return {
+    logo: m.logo ?? "",
+    eslogan: m.eslogan ?? "",
+    colorPrincipal: m.colorPrincipal ?? "",
+    colorSecundario: m.colorSecundario ?? "",
+    colorFondo: m.colorFondo ?? "",
+  };
+}
+
+/** Las variables de color de una vista previa (solo #rrggbb, solo `--color-*`), listas para `style`. */
+export function estiloDeVista(vista) {
+  const c = vista?.colores;
+  if (!c || typeof c !== "object") return {};
+  return Object.fromEntries(Object.entries(c).filter(([k, v]) => /^--color-[a-z-]+$/.test(k) && /^#[0-9a-f]{6}$/i.test(String(v))));
+}

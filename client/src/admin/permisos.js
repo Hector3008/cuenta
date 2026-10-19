@@ -31,6 +31,7 @@ export function capacidades(permisos) {
       gestionar: p("fidelizacion:gestionar"),
     },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
+    marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
   };
 }
 

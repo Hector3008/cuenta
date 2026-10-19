@@ -1,0 +1,351 @@
+diff --git a/client/src/admin/Administracion.jsx b/client/src/admin/Administracion.jsx
+index 9e5aa20..98e64b6 100644
+--- a/client/src/admin/Administracion.jsx
++++ b/client/src/admin/Administracion.jsx
+@@ -46,7 +46,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
+         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
+         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
+         {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
+-        {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} />}
++        {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} />}
+       </div>
+     </main>
+   );
+diff --git a/client/src/admin/Empresa.jsx b/client/src/admin/Empresa.jsx
+index 8ace30e..d0aa04a 100644
+--- a/client/src/admin/Empresa.jsx
++++ b/client/src/admin/Empresa.jsx
+@@ -3,6 +3,7 @@ import { api, comoLista, mensajeAdmin } from "./http.js";
+ import { Aviso, BotonConfirmar, Campo } from "./piezas.jsx";
+ import { normalizarRol } from "./Equipo.jsx";
+ import { empresaActiva } from "./permisos.js";
++import Marca from "./Marca.jsx";
+ 
+ // Sección Empresa: datos básicos (solo lectura: aún no hay ruta para editar la
+ // empresa, 5.20/5.10) y roles de la empresa con CRUD si hay `rol:gestionar` (5.14).
+@@ -19,7 +20,7 @@ export function parsearPermisos(texto) {
+ 
+ const VACIO = { nombre: "", permisos: "" };
+ 
+-export default function Empresa({ yo, capRoles }) {
++export default function Empresa({ yo, capRoles, capMarca = {} }) {
+   const [roles, setRoles] = useState([]);
+   const [cargando, setCargando] = useState(false);
+   const [error, setError] = useState("");
+@@ -88,10 +89,12 @@ export default function Empresa({ yo, capRoles }) {
+         <dt>PIN de tablet</dt><dd>{yo?.pinHabilitado ? "Habilitado" : "No habilitado"}</dd>
+       </dl>
+       <p className="adm-nota">
+-        Los datos de la empresa se ven aquí pero todavía no se pueden editar: falta la ruta del núcleo
+-        (nombre visible, apariencia, país y moneda se cambian hoy por código).
++        El nombre, el país y la moneda de la empresa todavía no se pueden editar desde aquí: se cambian por código.
++        La marca de la carta (logo, eslogan y colores) sí se edita abajo, si tu rol lo permite.
+       </p>
+ 
++      {capMarca.gestionar && <Marca nombre={empresa.nombre} />}
++
+       {capRoles.ver && (
+         <>
+           <header className="adm-cabecera">
+diff --git a/client/src/admin/Marca.jsx b/client/src/admin/Marca.jsx
+new file mode 100644
+index 0000000..0b75173
+--- /dev/null
++++ b/client/src/admin/Marca.jsx
+@@ -0,0 +1,124 @@
++import { useCallback, useEffect, useState } from "react";
++import { api, mensajeAdmin } from "./http.js";
++import { Aviso, Campo } from "./piezas.jsx";
++import { CAMPOS_COLOR, MAX_ESLOGAN, esEnlaceDeDrive, estiloDeVista, formularioDeMarca, normalizarColorEntrada, parsearMarca } from "./formato.js";
++
++// Marca de la empresa (5.33): logo, eslogan y colores de la carta pública. El núcleo valida y calcula la
++// paleta; la vista previa se pinta con la paleta que devolvió al guardar (lo que se ve aquí es lo que sale en la carta).
++
++const COLOR_MUESTRA = { colorPrincipal: "#1f5f4a", colorSecundario: "#c8873a", colorFondo: "#f4f1ea" };
++
++function CampoColor({ campo, etiqueta, ayuda, valor, onCambio }) {
++  const valido = normalizarColorEntrada(valor);
++  return (
++    <Campo etiqueta={etiqueta} ayuda={ayuda}>
++      <span className="adm-color">
++        <input type="color" aria-label={`Elegir ${etiqueta.toLowerCase()}`} value={valido ?? COLOR_MUESTRA[campo]} onChange={(e) => onCambio(e.target.value)} />
++        <input value={valor} placeholder="Por defecto" maxLength={7} spellCheck={false} onChange={(e) => onCambio(e.target.value)} aria-invalid={valor.trim() !== "" && !valido} />
++        {valor.trim() !== "" && (
++          <button type="button" className="adm-link" onClick={() => onCambio("")}>Quitar</button>
++        )}
++      </span>
++    </Campo>
++  );
++}
++
++function VistaPrevia({ vista, nombre }) {
++  if (!vista) return <p className="adm-nota">Todavía no hay marca: la carta usa la apariencia por defecto y sigue el modo claro u oscuro del dispositivo.</p>;
++  const estilo = estiloDeVista(vista);
++  return (
++    <div className="adm-marca-vista" style={{ ...estilo, ...(estilo["--color-fondo"] ? { background: estilo["--color-fondo"], color: estilo["--color-texto"] } : {}) }} aria-label="Vista previa de la carta">
++      {vista.logo && <img className="adm-marca-logo" src={vista.logo} alt={`Logo de ${nombre ?? "la empresa"}`} referrerPolicy="no-referrer" />}
++      <strong className="adm-marca-titulo">{nombre ?? "Tu empresa"}</strong>
++      <span className="adm-marca-eslogan" style={estilo["--color-texto-suave"] ? { color: estilo["--color-texto-suave"] } : undefined}>{vista.eslogan ?? "Nuestra carta"}</span>
++      <span className="adm-marca-tarjeta" style={estilo["--color-superficie"] ? { background: estilo["--color-superficie"], borderColor: estilo["--color-borde"] } : undefined}>
++        <span>Café americano</span>
++        <span>S/ 6.50</span>
++      </span>
++      <span className="adm-marca-fila">
++        <span className="adm-marca-boton" style={estilo["--color-principal"] ? { background: estilo["--color-principal"], color: estilo["--color-principal-texto"] } : undefined}>Ver movimientos</span>
++        <span className="adm-marca-puntos" style={estilo["--color-principal"] ? { color: estilo["--color-principal"] } : undefined}>95 puntos</span>
++        <span className="adm-marca-estrellas" style={estilo["--color-secundario"] ? { color: estilo["--color-secundario"] } : undefined}>★★★★☆</span>
++      </span>
++    </div>
++  );
++}
++
++export default function Marca({ nombre }) {
++  const [vista, setVista] = useState(null);
++  const [formulario, setFormulario] = useState(formularioDeMarca(null));
++  const [cargando, setCargando] = useState(true);
++  const [error, setError] = useState("");
++  const [ok, setOk] = useState("");
++  const [guardando, setGuardando] = useState(false);
++
++  const aplicar = useCallback((r) => {
++    setFormulario(formularioDeMarca(r?.marca));
++    setVista(r?.vista ?? null);
++  }, []);
++
++  useEffect(() => {
++    let vigente = true;
++    api.get("auth/marca").then(
++      (r) => vigente && (aplicar(r), setCargando(false)),
++      (e) => vigente && (setError(mensajeAdmin(e)), setCargando(false)),
++    );
++    return () => {
++      vigente = false;
++    };
++  }, [aplicar]);
++
++  const campo = (k) => (valor) => setFormulario((f) => ({ ...f, [k]: valor }));
++
++  async function guardar(ev) {
++    ev.preventDefault();
++    setOk("");
++    const p = parsearMarca(formulario);
++    if (!p.ok) return setError(p.error);
++    setError("");
++    setGuardando(true);
++    try {
++      aplicar(await api.put("auth/marca", p.cuerpo));
++      setOk("Marca guardada. Ya se ve en la carta pública.");
++    } catch (err) {
++      setError(mensajeAdmin(err)); // p. ej. un color que se confunde con el fondo: el mensaje del núcleo lo explica
++    } finally {
++      setGuardando(false);
++    }
++  }
++
++  if (cargando) return <p className="cargando">Cargando la marca…</p>;
++  return (
++    <section aria-labelledby="t-marca">
++      <header className="adm-cabecera"><h3 id="t-marca">Marca de la carta</h3></header>
++      <p className="adm-nota">Logo, eslogan y colores que ven tus clientes en la carta pública. Todo es opcional: lo que dejes vacío usa la apariencia por defecto.</p>
++      <Aviso onCerrar={() => setError("")}>{error}</Aviso>
++      <Aviso tipo="ok" onCerrar={() => setOk("")}>{ok}</Aviso>
++      <div className="adm-marca">
++        <form className="adm-form" onSubmit={guardar}>
++          <Campo
++            etiqueta="Logo"
++            ayuda={esEnlaceDeDrive(formulario.logo) ? "Enlace de Google Drive: se guardará como dirección directa de la imagen. El archivo debe estar compartido con «Cualquier persona con el enlace»." : "Dirección completa de la imagen, que empiece con https://. No se suben archivos. Vacío = sin logo."}
++          >
++            <input value={formulario.logo} onChange={(e) => campo("logo")(e.target.value)} placeholder="https://…" maxLength={500} />
++          </Campo>
++          <Campo etiqueta="Eslogan" ayuda={`Reemplaza «Nuestra carta» bajo el nombre. Hasta ${MAX_ESLOGAN} caracteres.`}>
++            <input value={formulario.eslogan} maxLength={MAX_ESLOGAN} onChange={(e) => campo("eslogan")(e.target.value)} placeholder="Nuestra carta" />
++          </Campo>
++          {CAMPOS_COLOR.map(([k, etiqueta, ayuda]) => (
++            <CampoColor key={k} campo={k} etiqueta={etiqueta} ayuda={ayuda} valor={formulario[k]} onCambio={campo(k)} />
++          ))}
++          <p className="adm-nota">Con colores propios la carta no cambia con el modo oscuro del dispositivo: se ve siempre con los colores de tu marca.</p>
++          <div className="adm-acciones">
++            <button type="submit" className="adm-btn adm-btn--primario" disabled={guardando}>{guardando ? "Guardando…" : "Guardar marca"}</button>
++          </div>
++        </form>
++        <div>
++          <h4 className="adm-marca-sub">Así se ve</h4>
++          <VistaPrevia vista={vista} nombre={nombre} />
++          <p className="adm-nota">La vista previa muestra lo último que guardaste.</p>
++        </div>
++      </div>
++    </section>
++  );
++}
+diff --git a/client/src/admin/admin.css b/client/src/admin/admin.css
+index 125920b..8907ae5 100644
+--- a/client/src/admin/admin.css
++++ b/client/src/admin/admin.css
+@@ -51,3 +51,20 @@
+ /* El textarea de los formularios se ve igual que los demás campos (.campo input, estilos.css). */
+ .adm .campo textarea { padding: 12px 14px; font: inherit; color: inherit; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 8px; resize: vertical; }
+ .adm .campo textarea:focus-visible { outline: 2px solid var(--color-principal); outline-offset: 1px; }
++
++/* Marca de la carta (5.33) */
++.adm-marca { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 320px); gap: 16px; align-items: start; }
++@media (max-width: 900px) { .adm-marca { grid-template-columns: minmax(0, 1fr); } }
++.adm-marca-sub { margin: 12px 0 8px; }
++.adm-color { display: flex; align-items: center; gap: 8px; }
++.adm-color input[type="color"] { width: 44px; height: 38px; padding: 2px; border: 1px solid var(--color-borde); border-radius: 8px; background: var(--color-superficie); cursor: pointer; }
++.adm-color input:not([type="color"]) { width: 9rem; }
++.adm-color input[aria-invalid="true"] { border-color: var(--color-error); }
++.adm-marca-vista { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--color-borde); border-radius: var(--radio); }
++.adm-marca-logo { max-width: 140px; max-height: 70px; width: auto; height: auto; object-fit: contain; }
++.adm-marca-titulo { font-size: 1.25rem; }
++.adm-marca-eslogan { font-size: .875rem; }
++.adm-marca-tarjeta { display: flex; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--color-borde); border-radius: 8px; }
++.adm-marca-fila { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
++.adm-marca-boton { padding: 6px 12px; border-radius: 8px; font-size: .875rem; background: var(--color-principal); color: var(--color-principal-texto); }
++.adm-marca-puntos { font-weight: 700; }
+diff --git a/client/src/admin/formato.js b/client/src/admin/formato.js
+index 804d025..c1f2657 100644
+--- a/client/src/admin/formato.js
++++ b/client/src/admin/formato.js
+@@ -170,3 +170,68 @@ export function formularioDeReto(r) {
+   const { puntos: _puntos, ...resto } = formularioDeBeneficio(r);
+   return { ...resto, categoria: r?.categoria ?? "" };
+ }
++
++// Marca de la empresa (5.33): logo, eslogan y tres colores que se ven en la carta pública. Aquí solo se
++// valida el formato antes de enviar; qué combinaciones de color se aceptan (contraste, fondo ilegible)
++// lo decide el núcleo y su mensaje se muestra tal cual.
++export const MAX_ESLOGAN = 80;
++const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
++
++/** "#ABC", "abc" o "#aabbcc" → "#aabbcc"; null si no es un color. Vacío no es un color (se trata aparte). */
++export function normalizarColorEntrada(texto) {
++  const t = String(texto ?? "").trim();
++  const conAlmohadilla = /^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(t) ? `#${t}` : t;
++  if (!HEX.test(conAlmohadilla)) return null;
++  const h = conAlmohadilla.slice(1).toLowerCase();
++  return `#${h.length === 3 ? [...h].map((c) => c + c).join("") : h}`;
++}
++
++export const CAMPOS_COLOR = [
++  ["colorPrincipal", "Color principal", "Botones, puntos y barras de avance."],
++  ["colorSecundario", "Color de acento", "Estrellas y detalles."],
++  ["colorFondo", "Color de fondo", "Fondo de la carta. Si es oscuro, el texto se vuelve claro."],
++];
++
++/**
++ * Del formulario (todo texto) al cuerpo de `PUT /auth/marca`. Cada campo vacío se envía como null (= quitar).
++ * Devuelve { ok: true, cuerpo } o { ok: false, error }.
++ */
++export function parsearMarca(f) {
++  const cuerpo = {};
++  const logo = parsearImagen(f?.logo);
++  if (!logo.ok) return { ok: false, error: "El logo debe ser una dirección que empiece con https://, sin espacios y de hasta 500 caracteres." };
++  cuerpo.logo = logo.valor;
++  const eslogan = String(f?.eslogan ?? "").trim().replace(/\s+/g, " ");
++  if (eslogan.length > MAX_ESLOGAN) return { ok: false, error: `El eslogan puede tener hasta ${MAX_ESLOGAN} caracteres.` };
++  cuerpo.eslogan = eslogan === "" ? null : eslogan;
++  for (const [campo, etiqueta] of CAMPOS_COLOR) {
++    const t = String(f?.[campo] ?? "").trim();
++    if (t === "") {
++      cuerpo[campo] = null;
++      continue;
++    }
++    const c = normalizarColorEntrada(t);
++    if (!c) return { ok: false, error: `${etiqueta}: escribe un color como #8b1e3f o déjalo vacío.` };
++    cuerpo[campo] = c;
++  }
++  return { ok: true, cuerpo };
++}
++
++/** La marca guardada (de `GET /auth/marca`) → valores del formulario. */
++export function formularioDeMarca(marca) {
++  const m = marca ?? {};
++  return {
++    logo: m.logo ?? "",
++    eslogan: m.eslogan ?? "",
++    colorPrincipal: m.colorPrincipal ?? "",
++    colorSecundario: m.colorSecundario ?? "",
++    colorFondo: m.colorFondo ?? "",
++  };
++}
++
++/** Las variables de color de una vista previa (solo #rrggbb, solo `--color-*`), listas para `style`. */
++export function estiloDeVista(vista) {
++  const c = vista?.colores;
++  if (!c || typeof c !== "object") return {};
++  return Object.fromEntries(Object.entries(c).filter(([k, v]) => /^--color-[a-z-]+$/.test(k) && /^#[0-9a-f]{6}$/i.test(String(v))));
++}
+diff --git a/client/src/admin/permisos.js b/client/src/admin/permisos.js
+index bcc0e05..0a0be4c 100644
+--- a/client/src/admin/permisos.js
++++ b/client/src/admin/permisos.js
+@@ -31,6 +31,7 @@ export function capacidades(permisos) {
+       gestionar: p("fidelizacion:gestionar"),
+     },
+     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
++    marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
+   };
+ }
+ 
+diff --git a/test/admin.test.js b/test/admin.test.js
+index 153ef18..7458020 100644
+--- a/test/admin.test.js
++++ b/test/admin.test.js
+@@ -2,7 +2,7 @@ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { DESTINOS, permite } from "../client/src/destinos.js";
+ import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
+-import { parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
++import { parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+ 
+ // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
+ globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
+@@ -210,3 +210,48 @@ test("formularioDeReto es la ida y vuelta de parsearReto", () => {
+   assert.equal(formularioDeReto(null).categoria, "");
+   assert.equal("puntos" in formularioDeReto(null), false);
+ });
++
++test("la marca de la carta la gestiona quien tiene empresa:marca (el administrador con *)", () => {
++  assert.equal(capacidades(["*"]).marca.gestionar, true);
++  assert.equal(capacidades(["empresa:marca"]).marca.gestionar, true);
++  assert.equal(capacidades(["empresa:*"]).marca.gestionar, true);
++  assert.equal(capacidades(["catalogo:leer", "fidelizacion:gestionar"]).marca.gestionar, false);
++  assert.equal(capacidades([]).marca.gestionar, false);
++});
++
++test("normalizarColorEntrada: #abc, abc y #AABBCC → #aabbcc; lo demás, null", () => {
++  assert.equal(normalizarColorEntrada("#ABC"), "#aabbcc");
++  assert.equal(normalizarColorEntrada("abc"), "#aabbcc");
++  assert.equal(normalizarColorEntrada(" 8B1E3F "), "#8b1e3f");
++  for (const v of ["", "#12", "#12345", "#gggggg", "rojo", "rgb(1,2,3)", "#8b1e3f;", null, undefined]) assert.equal(normalizarColorEntrada(v), null, String(v));
++});
++
++test("parsearMarca: logo con enlace de Drive convertido, eslogan recortado, colores normalizados y vacíos como null", () => {
++  const id = "1AbCdEfGhIjKlMnOpQrStUv";
++  const r = parsearMarca({ logo: `https://drive.google.com/file/d/${id}/view?usp=sharing`, eslogan: "  Café   de origen ", colorPrincipal: "8B1E3F", colorSecundario: "", colorFondo: "#FFF" });
++  assert.deepEqual(r, { ok: true, cuerpo: { logo: `https://drive.google.com/thumbnail?id=${id}&sz=w1000`, eslogan: "Café de origen", colorPrincipal: "#8b1e3f", colorSecundario: null, colorFondo: "#ffffff" } });
++  assert.deepEqual(parsearMarca({}), { ok: true, cuerpo: { logo: null, eslogan: null, colorPrincipal: null, colorSecundario: null, colorFondo: null } });
++});
++
++test("parsearMarca rechaza lo que el núcleo rechazaría y dice qué campo", () => {
++  assert.match(parsearMarca({ logo: "http://e.com/l.png" }).error, /logo/i);
++  assert.match(parsearMarca({ logo: "https://e.com/con espacio.png" }).error, /logo/i);
++  assert.match(parsearMarca({ eslogan: "a".repeat(81) }).error, /80/);
++  assert.match(parsearMarca({ colorPrincipal: "rojo" }).error, /principal/i);
++  assert.match(parsearMarca({ colorFondo: "#12" }).error, /fondo/i);
++  assert.equal(parsearMarca({ colorSecundario: "nope" }).ok, false);
++});
++
++test("formularioDeMarca es la ida y vuelta de parsearMarca", () => {
++  const marca = { logo: "https://e.com/l.png", eslogan: "Hola", colorPrincipal: "#8b1e3f", colorSecundario: null, colorFondo: null };
++  const f = formularioDeMarca(marca);
++  assert.deepEqual(f, { logo: "https://e.com/l.png", eslogan: "Hola", colorPrincipal: "#8b1e3f", colorSecundario: "", colorFondo: "" });
++  assert.deepEqual(parsearMarca(f).cuerpo, marca);
++  assert.deepEqual(formularioDeMarca(null), { logo: "", eslogan: "", colorPrincipal: "", colorSecundario: "", colorFondo: "" });
++});
++
++test("estiloDeVista deja pasar solo variables --color-* con #rrggbb", () => {
++  assert.deepEqual(estiloDeVista({ colores: { "--color-principal": "#8b1e3f", "--color-fondo": "red; x:y", "--otra": "#000000", "--color-texto": "#1D211F" } }), { "--color-principal": "#8b1e3f", "--color-texto": "#1D211F" });
++  assert.deepEqual(estiloDeVista(null), {});
++  assert.deepEqual(estiloDeVista({ colores: null }), {});
++});

@@ -51,3 +51,20 @@
 /* El textarea de los formularios se ve igual que los demás campos (.campo input, estilos.css). */
 .adm .campo textarea { padding: 12px 14px; font: inherit; color: inherit; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 8px; resize: vertical; }
 .adm .campo textarea:focus-visible { outline: 2px solid var(--color-principal); outline-offset: 1px; }
+
+/* Marca de la carta (5.33) */
+.adm-marca { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 320px); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .adm-marca { grid-template-columns: minmax(0, 1fr); } }
+.adm-marca-sub { margin: 12px 0 8px; }
+.adm-color { display: flex; align-items: center; gap: 8px; }
+.adm-color input[type="color"] { width: 44px; height: 38px; padding: 2px; border: 1px solid var(--color-borde); border-radius: 8px; background: var(--color-superficie); cursor: pointer; }
+.adm-color input:not([type="color"]) { width: 9rem; }
+.adm-color input[aria-invalid="true"] { border-color: var(--color-error); }
+.adm-marca-vista { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--color-borde); border-radius: var(--radio); }
+.adm-marca-logo { max-width: 140px; max-height: 70px; width: auto; height: auto; object-fit: contain; }
+.adm-marca-titulo { font-size: 1.25rem; }
+.adm-marca-eslogan { font-size: .875rem; }
+.adm-marca-tarjeta { display: flex; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--color-borde); border-radius: 8px; }
+.adm-marca-fila { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.adm-marca-boton { padding: 6px 12px; border-radius: 8px; font-size: .875rem; background: var(--color-principal); color: var(--color-principal-texto); }
+.adm-marca-puntos { font-weight: 700; }

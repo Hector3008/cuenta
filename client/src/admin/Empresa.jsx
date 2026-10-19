@@ -3,6 +3,7 @@ import { api, comoLista, mensajeAdmin } from "./http.js";
 import { Aviso, BotonConfirmar, Campo } from "./piezas.jsx";
 import { normalizarRol } from "./Equipo.jsx";
 import { empresaActiva } from "./permisos.js";
+import Marca from "./Marca.jsx";
 
 // Sección Empresa: datos básicos (solo lectura: aún no hay ruta para editar la
 // empresa, 5.20/5.10) y roles de la empresa con CRUD si hay `rol:gestionar` (5.14).
@@ -19,7 +20,7 @@ export function parsearPermisos(texto) {
 
 const VACIO = { nombre: "", permisos: "" };
 
-export default function Empresa({ yo, capRoles }) {
+export default function Empresa({ yo, capRoles, capMarca = {} }) {
   const [roles, setRoles] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
@@ -88,9 +89,11 @@ export default function Empresa({ yo, capRoles }) {
         <dt>PIN de tablet</dt><dd>{yo?.pinHabilitado ? "Habilitado" : "No habilitado"}</dd>
       </dl>
       <p className="adm-nota">
-        Los datos de la empresa se ven aquí pero todavía no se pueden editar: falta la ruta del núcleo
-        (nombre visible, apariencia, país y moneda se cambian hoy por código).
+        El nombre, el país y la moneda de la empresa todavía no se pueden editar desde aquí: se cambian por código.
+        La marca de la carta (logo, eslogan y colores) sí se edita abajo, si tu rol lo permite.
       </p>
+
+      {capMarca.gestionar && <Marca nombre={empresa.nombre} />}
 
       {capRoles.ver && (
         <>

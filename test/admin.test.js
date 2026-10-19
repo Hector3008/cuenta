@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DESTINOS, permite } from "../client/src/destinos.js";
 import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
-import { parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+import { parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
 
 // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
 globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
@@ -209,4 +209,49 @@ test("formularioDeReto es la ida y vuelta de parsearReto", () => {
   assert.deepEqual(parsearReto(f).cuerpo, { nombre: "Catador", descripcion: null, tipo: "item_gratis", valor: null, itemCodigo: "LATTE", vigenciaDias: 15, categoria: "Cafés" });
   assert.equal(formularioDeReto(null).categoria, "");
   assert.equal("puntos" in formularioDeReto(null), false);
+});
+
+test("la marca de la carta la gestiona quien tiene empresa:marca (el administrador con *)", () => {
+  assert.equal(capacidades(["*"]).marca.gestionar, true);
+  assert.equal(capacidades(["empresa:marca"]).marca.gestionar, true);
+  assert.equal(capacidades(["empresa:*"]).marca.gestionar, true);
+  assert.equal(capacidades(["catalogo:leer", "fidelizacion:gestionar"]).marca.gestionar, false);
+  assert.equal(capacidades([]).marca.gestionar, false);
+});
+
+test("normalizarColorEntrada: #abc, abc y #AABBCC → #aabbcc; lo demás, null", () => {
+  assert.equal(normalizarColorEntrada("#ABC"), "#aabbcc");
+  assert.equal(normalizarColorEntrada("abc"), "#aabbcc");
+  assert.equal(normalizarColorEntrada(" 8B1E3F "), "#8b1e3f");
+  for (const v of ["", "#12", "#12345", "#gggggg", "rojo", "rgb(1,2,3)", "#8b1e3f;", null, undefined]) assert.equal(normalizarColorEntrada(v), null, String(v));
+});
+
+test("parsearMarca: logo con enlace de Drive convertido, eslogan recortado, colores normalizados y vacíos como null", () => {
+  const id = "1AbCdEfGhIjKlMnOpQrStUv";
+  const r = parsearMarca({ logo: `https://drive.google.com/file/d/${id}/view?usp=sharing`, eslogan: "  Café   de origen ", colorPrincipal: "8B1E3F", colorSecundario: "", colorFondo: "#FFF" });
+  assert.deepEqual(r, { ok: true, cuerpo: { logo: `https://drive.google.com/thumbnail?id=${id}&sz=w1000`, eslogan: "Café de origen", colorPrincipal: "#8b1e3f", colorSecundario: null, colorFondo: "#ffffff" } });
+  assert.deepEqual(parsearMarca({}), { ok: true, cuerpo: { logo: null, eslogan: null, colorPrincipal: null, colorSecundario: null, colorFondo: null } });
+});
+
+test("parsearMarca rechaza lo que el núcleo rechazaría y dice qué campo", () => {
+  assert.match(parsearMarca({ logo: "http://e.com/l.png" }).error, /logo/i);
+  assert.match(parsearMarca({ logo: "https://e.com/con espacio.png" }).error, /logo/i);
+  assert.match(parsearMarca({ eslogan: "a".repeat(81) }).error, /80/);
+  assert.match(parsearMarca({ colorPrincipal: "rojo" }).error, /principal/i);
+  assert.match(parsearMarca({ colorFondo: "#12" }).error, /fondo/i);
+  assert.equal(parsearMarca({ colorSecundario: "nope" }).ok, false);
+});
+
+test("formularioDeMarca es la ida y vuelta de parsearMarca", () => {
+  const marca = { logo: "https://e.com/l.png", eslogan: "Hola", colorPrincipal: "#8b1e3f", colorSecundario: null, colorFondo: null };
+  const f = formularioDeMarca(marca);
+  assert.deepEqual(f, { logo: "https://e.com/l.png", eslogan: "Hola", colorPrincipal: "#8b1e3f", colorSecundario: "", colorFondo: "" });
+  assert.deepEqual(parsearMarca(f).cuerpo, marca);
+  assert.deepEqual(formularioDeMarca(null), { logo: "", eslogan: "", colorPrincipal: "", colorSecundario: "", colorFondo: "" });
+});
+
+test("estiloDeVista deja pasar solo variables --color-* con #rrggbb", () => {
+  assert.deepEqual(estiloDeVista({ colores: { "--color-principal": "#8b1e3f", "--color-fondo": "red; x:y", "--otra": "#000000", "--color-texto": "#1D211F" } }), { "--color-principal": "#8b1e3f", "--color-texto": "#1D211F" });
+  assert.deepEqual(estiloDeVista(null), {});
+  assert.deepEqual(estiloDeVista({ colores: null }), {});
 });
