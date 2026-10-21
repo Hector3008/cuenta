@@ -60,6 +60,15 @@ export const DESTINOS = [
     abre: { pantalla: "admin:fidelizacion" },
   },
   {
+    id: "empresa.reportes",
+    titulo: "Reportes",
+    descripcion: "Ventas en el tiempo, por categoría, mesero y cliente, platos y horas pico.",
+    requiere: "reporte:leer",
+    servicio: "restaurante",
+    disponible: true,
+    abre: { pantalla: "admin:reportes" },
+  },
+  {
     id: "empresa.datos",
     titulo: "Empresa",
     descripcion: "Datos de la empresa y sus roles.",

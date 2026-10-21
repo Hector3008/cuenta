@@ -4,19 +4,21 @@ import Equipo from "./Equipo.jsx";
 import Catalogo from "./Catalogo.jsx";
 import Fidelizacion from "./Fidelizacion.jsx";
 import Empresa from "./Empresa.jsx";
+import Reportes from "./Reportes.jsx";
 import "./admin.css";
 
-// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Empresa.
+// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Reportes · Empresa.
 // Props:
 //   yo               lo que devuelve `api.yo()` (ya normalizado)
-//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "empresa" (viene del destino que abrió la pantalla)
+//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "reportes" | "empresa" (viene del destino que abrió la pantalla)
 //   alVolver         vuelve a Inicio
 // Sin enrutador (como el resto de `cuenta`): la pestaña vive en el estado. Solo se ofrecen las
 // secciones que la persona puede ver; los botones de CRUD salen de `capacidades`.
 export default function Administracion({ yo, seccionInicial, alVolver }) {
   const permisos = yo?.permisos;
   const cap = useMemo(() => capacidades(permisos), [permisos]);
-  const secciones = useMemo(() => seccionesVisibles(permisos), [permisos]);
+  const servicios = yo?.servicios;
+  const secciones = useMemo(() => seccionesVisibles(permisos, servicios), [permisos, servicios]);
   const [actual, setActual] = useState(
     secciones.some((s) => s.id === seccionInicial) ? seccionInicial : secciones[0]?.id,
   );
@@ -46,6 +48,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
         {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
+        {actual === "reportes" && <Reportes />}
         {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} capDatos={cap.datos} />}
       </div>
     </main>
