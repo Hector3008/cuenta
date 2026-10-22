@@ -10,7 +10,7 @@ import {
 } from "./reportes-logica.js";
 import "./reportes.css";
 
-// Reportes de ventas (5.35). Todo viene resumido del servidor (`GET restaurante/reportes/ventas`): aquí solo se dibuja.
+// Reportes de ventas (5.35). Todo viene resumido del servidor (`GET tobt/reportes/ventas`): aquí solo se dibuja.
 // Una venta es lo cobrado (ítems pagados); el mesero es quien cobró. Los gráficos son SVG o HTML propios, sin librerías.
 // Cada gráfico tiene su vista de tabla (los tooltips ayudan, pero nunca son la única forma de leer un valor).
 
@@ -282,7 +282,7 @@ export default function Reportes() {
     setCargando(true);
     setError("");
     api
-      .get("restaurante/reportes/ventas", q.consulta)
+      .get("tobt/reportes/ventas", q.consulta)
       .then((d) => {
         if (n !== pedido.current) return; // una respuesta vieja nunca pisa a una más nueva
         colores.current = asignarColores(colores.current, (d.categorias ?? []).filter((c) => !c.otros && !c.sinCategoria).map((c) => c.nombre));

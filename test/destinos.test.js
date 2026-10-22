@@ -8,10 +8,10 @@ import {
 // Mismo formato que valida el núcleo (core/src/auth/preferencias.js): si cambia allí, falla aquí.
 const ID_PAGINA = /^[a-z][a-z0-9_]{0,29}(\.[a-z][a-z0-9_]{0,29}){0,2}$/;
 
-// Roles de la plantilla `restaurante` del núcleo (core/src/modelos/plantillas.js).
+// Roles de la plantilla `tobt` del núcleo (core/src/modelos/plantillas.js).
 const MESERO = ["estacion:creacion", "estacion:carta", "documento:crear", "documento:leer", "documento:editar", "catalogo:leer", "cliente:leer", "cliente:crear"];
 const COCINA = ["estacion:cocina", "documento:leer", "documento:editar"];
-const yoCon = (permisos, servicios = ["restaurante"], extra = {}) => ({
+const yoCon = (permisos, servicios = ["tobt"], extra = {}) => ({
   usuario: { id: "u1" }, empresaActivaId: "e1", permisos, servicios, paginaPrincipal: null, ...extra,
 });
 
@@ -52,8 +52,8 @@ test("registro: cuenta.perfil siempre está disponible y sin requisitos", () => 
 // ---------- qué ve cada perfil ----------
 const catalogoDePrueba = [
   ...DESTINOS,
-  { id: "restaurante.pedidos", titulo: "Pedidos", descripcion: "x", requiere: "documento:leer", servicio: "restaurante", disponible: true, abre: { enlace: "restaurante/" } },
-  { id: "restaurante.cocina", titulo: "Cocina", descripcion: "x", requiere: "estacion:cocina", servicio: "restaurante", disponible: true, abre: { enlace: "restaurante/cocina/" } },
+  { id: "tobt.pedidos", titulo: "Pedidos", descripcion: "x", requiere: "documento:leer", servicio: "tobt", disponible: true, abre: { enlace: "tobt/" } },
+  { id: "tobt.cocina", titulo: "Cocina", descripcion: "x", requiere: "estacion:cocina", servicio: "tobt", disponible: true, abre: { enlace: "tobt/cocina/" } },
   { id: "empresa.equipo", titulo: "Equipo", descripcion: "x", requiere: "usuario:gestionar", servicio: null, disponible: true, abre: { enlace: "equipo/" } },
 ].filter((d, i, todos) => todos.findLastIndex((x) => x.id === d.id) === i); // las del final reemplazan a las previstas
 
@@ -61,17 +61,17 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => 
 
 test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.reportes", "restaurante.cocina", "restaurante.pedidos"]);
-  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "restaurante.pedidos"]);
-  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "restaurante.cocina", "restaurante.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
   assert.deepEqual(ids(yoCon([], [])), ["cuenta.perfil", "empresa.datos"]);
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.reportes", "restaurante.cocina", "restaurante.pedidos"]);
-  assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "restaurante.pedidos"]);
-  assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "restaurante.cocina", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
 });
 
 test("accesibles: sin el servicio contratado no hay acceso, ni siquiera con `*`", () => {
@@ -90,7 +90,7 @@ test("accesibles: Reportes pide reporte:leer y el servicio contratado; el mesero
 
 test("accesibles: un rol propio con permisos sueltos ve exactamente lo que esos permisos habilitan", () => {
   const encargado = yoCon(["usuario:gestionar", "documento:*"]);
-  assert.deepEqual(idsVisibles(encargado), ["cuenta.perfil", "empresa.datos", "empresa.equipo", "restaurante.pedidos"]);
+  assert.deepEqual(idsVisibles(encargado), ["cuenta.perfil", "empresa.datos", "empresa.equipo", "tobt.pedidos"]);
 });
 
 test("accesibles: tolera una respuesta sin permisos ni servicios (fallo seguro)", () => {
@@ -104,25 +104,25 @@ test("accesibles: un destino previsto (no disponible) nunca se muestra", () => {
 
 // ---------- paginaPrincipal ----------
 test("resolver: devuelve el destino guardado si aplica en la empresa activa", () => {
-  const d = resolverPaginaPrincipal(yoCon(MESERO, ["restaurante"], { paginaPrincipal: "restaurante.pedidos" }), catalogoDePrueba);
-  assert.equal(d?.id, "restaurante.pedidos");
-  assert.equal(resolverPaginaPrincipal(yoCon(MESERO, ["restaurante"], { paginaPrincipal: "cuenta.perfil" }))?.id, "cuenta.perfil");
+  const d = resolverPaginaPrincipal(yoCon(MESERO, ["tobt"], { paginaPrincipal: "tobt.pedidos" }), catalogoDePrueba);
+  assert.equal(d?.id, "tobt.pedidos");
+  assert.equal(resolverPaginaPrincipal(yoCon(MESERO, ["tobt"], { paginaPrincipal: "cuenta.perfil" }))?.id, "cuenta.perfil");
 });
 
 test("resolver: cae a Inicio (null), sin error, si no aplica", () => {
-  const con = (pp, permisos = MESERO, servicios = ["restaurante"]) =>
+  const con = (pp, permisos = MESERO, servicios = ["tobt"]) =>
     resolverPaginaPrincipal(yoCon(permisos, servicios, { paginaPrincipal: pp }), catalogoDePrueba);
   assert.equal(con(null), null); // sin elegir
   assert.equal(con(""), null);
-  assert.equal(con("restaurante.cocina"), null); // el mesero no tiene la estación
-  assert.equal(con("restaurante.pedidos", MESERO, ["siscore"]), null); // otra empresa sin ese servicio
+  assert.equal(con("tobt.cocina"), null); // el mesero no tiene la estación
+  assert.equal(con("tobt.pedidos", MESERO, ["siscore"]), null); // otra empresa sin ese servicio
   assert.equal(con("empresa.equipo"), null); // sin permiso
   assert.equal(con("destino.que.ya.no.existe"), null); // retirado del registro
   assert.equal(con("https://malo.com"), null); // una URL nunca es un destino
 });
 
 test("resolver: un destino previsto (aún sin pantalla) no se abre aunque esté guardado", () => {
-  assert.equal(resolverPaginaPrincipal(yoCon(["*"], ["restaurante"], { paginaPrincipal: "empresa.clientes" })), null);
+  assert.equal(resolverPaginaPrincipal(yoCon(["*"], ["tobt"], { paginaPrincipal: "empresa.clientes" })), null);
 });
 
 // ---------- marcas de "ya se abrió" ----------

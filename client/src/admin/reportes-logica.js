@@ -1,8 +1,8 @@
 // Lógica pura de la pantalla Reportes (5.35), sin JSX ni navegador, para probarla con node --test.
-// Los datos ya vienen resumidos del servidor (`GET restaurante/reportes/ventas`); aquí solo se escalan,
+// Los datos ya vienen resumidos del servidor (`GET tobt/reportes/ventas`); aquí solo se escalan,
 // se rotulan y se convierten en geometría para los gráficos SVG.
 
-export const SERVICIO_REPORTES = "restaurante"; // pasa a «tobt» con la pieza 5.36
+export const SERVICIO_REPORTES = "tobt"; // antes «restaurante» (renombrado en 5.36)
 export const MAX_DIAS = 366;
 
 export const ATAJOS = Object.freeze([

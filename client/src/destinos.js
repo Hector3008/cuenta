@@ -18,7 +18,7 @@ export function permite(permisos, requerido) {
  *  - servicio: código del servicio que la empresa debe tener contratado y activo, o null.
  *  - disponible: solo los que ya tienen pantalla se muestran. Los demás documentan lo previsto.
  *  - abre: { pantalla } para una pantalla de `cuenta`, o { enlace } con una ruta relativa al gateway
- *    (por ejemplo "restaurante/"). null mientras no esté disponible.
+ *    (por ejemplo "tobt/"). null mientras no esté disponible.
  *
  * Agregar el front de un servicio nuevo = registrar (o activar) una línea aquí.
  */
@@ -64,7 +64,7 @@ export const DESTINOS = [
     titulo: "Reportes",
     descripcion: "Ventas en el tiempo, por categoría, mesero y cliente, platos y horas pico.",
     requiere: "reporte:leer",
-    servicio: "restaurante",
+    servicio: "tobt",
     disponible: true,
     abre: { pantalla: "admin:reportes" },
   },
@@ -87,22 +87,22 @@ export const DESTINOS = [
     abre: null,
   },
   {
-    id: "restaurante.pedidos",
+    id: "tobt.pedidos",
     titulo: "Pedidos",
     descripcion: "Abrir pedidos, pedir ítems, entregar y cobrar.",
     requiere: "documento:leer",
-    servicio: "restaurante",
+    servicio: "tobt",
     disponible: true,
-    abre: { enlace: "restaurante/" },
+    abre: { enlace: "tobt/" },
   },
   {
-    id: "restaurante.cocina",
+    id: "tobt.cocina",
     titulo: "Cocina",
     descripcion: "Ítems en preparación, uno por tarjeta.",
     requiere: "estacion:cocina",
-    servicio: "restaurante",
+    servicio: "tobt",
     disponible: true,
-    abre: { enlace: "restaurante/#cocina" },
+    abre: { enlace: "tobt/#cocina" },
   },
 ];
 

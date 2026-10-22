@@ -14,7 +14,7 @@ export default defineConfig({
       "/empleados": gateway,
       "/clientes": gateway,
       "/catalogo": gateway,
-      "/restaurante": gateway,
+      "/tobt": gateway,
     },
   },
 });

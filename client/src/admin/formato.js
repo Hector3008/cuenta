@@ -272,7 +272,7 @@ export function formularioDeDatos(datos) {
   return Object.fromEntries(Object.keys(LIMITES_DATOS).map((k) => [k, d[k] ?? ""]));
 }
 
-/** Las líneas del encabezado tal como salen en el recibo (misma regla que el recibo del restaurante). */
+/** Las líneas del encabezado tal como salen en el recibo (misma regla que el recibo de tobt). */
 export function lineasDeEncabezado(vista) {
   if (!vista) return [];
   const l = [];

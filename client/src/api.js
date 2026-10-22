@@ -75,7 +75,7 @@ export function normalizarYo(d) {
   };
 }
 
-/** URL absoluta (de ruta) hacia otro servicio montado en el gateway, por ejemplo "restaurante/". */
+/** URL absoluta (de ruta) hacia otro servicio montado en el gateway, por ejemplo "tobt/". */
 export const urlDeServicio = (ruta) => BASE + String(ruta).replace(/^\/+/, "");
 
 export const api = {

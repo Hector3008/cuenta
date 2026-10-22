@@ -37,7 +37,7 @@ sin sesión → `Login` · `debeCambiarPassword` → `CambiarPassword` · sin em
 
 `client/src/destinos.js` es el **registro único** de destinos. Un acceso se muestra si está `disponible`, la empresa tiene el servicio contratado y activo (`yo.servicios`) y la persona tiene el permiso (`yo.permisos`, misma regla que `permite` del núcleo). Mostrar u ocultar aquí **no es seguridad**: la seguridad vive en el backend.
 
-Para sumar el front de un servicio: activar su línea en `DESTINOS` (`disponible: true` y `abre: { enlace: "restaurante/" }`, ruta relativa al gateway). Los destinos previstos sin pantalla se quedan con `disponible: false` y no aparecen.
+Para sumar el front de un servicio: activar su línea en `DESTINOS` (`disponible: true` y `abre: { enlace: "tobt/" }`, ruta relativa al gateway). Los destinos previstos sin pantalla se quedan con `disponible: false` y no aparecen.
 
 `paginaPrincipal` (preferencia global de la persona, `PUT /auth/preferencias`) guarda el **id** de un destino, nunca una URL. Al entrar se abre una sola vez por persona y empresa y por pestaña (marca en `sessionStorage`), nunca antes del cambio obligatorio de contraseña y se reevalúa al cambiar de empresa. Si el destino ya no aplica (otra empresa, rol cambiado, retirado), se queda en Inicio sin error. Cerrar sesión olvida las marcas.
 
