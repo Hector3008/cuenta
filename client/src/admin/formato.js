@@ -150,6 +150,26 @@ export function parsearPuntosPorUnidad(texto) {
   return { ok: true, valor: n };
 }
 
+// ---------- puntos de un cliente: agregar a mano (5.39) ----------
+
+export const MAX_PUNTOS_AJUSTE = 1_000_000;
+export const MAX_MOTIVO_AJUSTE = 200;
+
+/**
+ * Agregar puntos a mano: un entero positivo y un motivo obligatorio (el núcleo lo guarda en el libro como `ajuste`,
+ * que no cuenta como consumo). Devuelve el cuerpo que se envía o { ok: false, error }.
+ */
+export function parsearAjustePuntos(f) {
+  const t = String(f?.puntos ?? "").trim();
+  if (!/^\d+$/.test(t)) return { ok: false, error: "Los puntos deben ser un número entero mayor que 0." };
+  const puntos = Number(t);
+  if (puntos < 1 || puntos > MAX_PUNTOS_AJUSTE) return { ok: false, error: `Los puntos deben estar entre 1 y ${MAX_PUNTOS_AJUSTE.toLocaleString("es")}.` };
+  const detalle = String(f?.detalle ?? "").trim();
+  if (detalle === "") return { ok: false, error: "Escribe el motivo: queda en el historial del cliente." };
+  if (detalle.length > MAX_MOTIVO_AJUSTE) return { ok: false, error: `El motivo puede tener hasta ${MAX_MOTIVO_AJUSTE} caracteres.` };
+  return { ok: true, cuerpo: { puntos, detalle } };
+}
+
 // ---------- retos de colección (5.31) ----------
 
 /**

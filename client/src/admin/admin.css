@@ -75,3 +75,7 @@
 .adm-recibo-vista__linea { color: #888; }
 .adm-recibo-vista__pie { margin-top: 6px; }
 .adm-recibo-vista small { margin-top: 6px; color: #555; }
+
+/* Agregar puntos a un cliente (5.39) */
+.adm-lista-clientes { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.adm-lista-clientes .adm-btn { width: 100%; text-align: left; }

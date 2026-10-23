@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DESTINOS, permite } from "../client/src/destinos.js";
 import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
-import { parsearDatos, formularioDeDatos, lineasDeEncabezado, parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+import { parsearDatos, formularioDeDatos, lineasDeEncabezado, parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearAjustePuntos, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
 
 // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
 globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
@@ -302,4 +302,19 @@ test("formularioDeDatos es la ida y vuelta de parsearDatos y lineasDeEncabezado 
   assert.deepEqual(lineasDeEncabezado({ nombre: "Café Central", razonSocial: "Café Central SAC", idFiscal: "2012", etiquetaIdFiscal: "RUC", direccion: "Av. 1", telefono: "999" }), ["Café Central SAC", "RUC: 2012", "Av. 1", "Tel: 999"]);
   assert.deepEqual(lineasDeEncabezado({ nombre: "Café", razonSocial: " café ", idFiscal: "AB-12345", etiquetaIdFiscal: "ID fiscal" }), ["ID fiscal: AB-12345"]);
   assert.deepEqual(lineasDeEncabezado(null), []);
+});
+
+test("agregar puntos a mano (5.39): entero positivo y motivo obligatorio", () => {
+  assert.deepEqual(parsearAjustePuntos({ puntos: " 250 ", detalle: " Saldo migrado " }), { ok: true, cuerpo: { puntos: 250, detalle: "Saldo migrado" } });
+  for (const puntos of ["", "0", "-5", "1.5", "1,5", "abc", "1000001"]) assert.equal(parsearAjustePuntos({ puntos, detalle: "x" }).ok, false, puntos);
+  assert.equal(parsearAjustePuntos({ puntos: "10", detalle: "  " }).ok, false);
+  assert.equal(parsearAjustePuntos({ puntos: "10", detalle: "x".repeat(201) }).ok, false);
+  assert.equal(parsearAjustePuntos({ puntos: "10", detalle: "x".repeat(200) }).ok, true);
+});
+
+test("agregar puntos a mano exige fidelizacion:gestionar y poder buscar clientes", () => {
+  assert.equal(capacidades(["*"]).fidelizacion.ajustar, true);
+  assert.equal(capacidades(["fidelizacion:gestionar", "cliente:leer"]).fidelizacion.ajustar, true);
+  assert.equal(capacidades(["fidelizacion:gestionar"]).fidelizacion.ajustar, false);
+  assert.equal(capacidades(["fidelizacion:canjear", "cliente:leer"]).fidelizacion.ajustar, false);
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, comoLista, mensajeAdmin } from "./http.js";
+import AjustarPuntos from "./AjustarPuntos.jsx";
 import { Aviso, BotonConfirmar, Campo } from "./piezas.jsx";
 import { TIPOS_BENEFICIO, formularioDeBeneficio, formularioDeReto, parsearBeneficio, parsearNiveles, parsearPuntosPorUnidad, parsearReto, textoNiveles } from "./formato.js";
 
@@ -205,6 +206,8 @@ export default function Fidelizacion({ cap }) {
               </div>
             )}
           </form>
+
+          {cap.ajustar && <AjustarPuntos />}
 
           {formulario && (
             <form className="adm-form" onSubmit={guardarBeneficio}>

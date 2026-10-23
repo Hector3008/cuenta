@@ -30,6 +30,8 @@ export function capacidades(permisos) {
     fidelizacion: {
       ver: p("fidelizacion:canjear") || p("fidelizacion:gestionar"),
       gestionar: p("fidelizacion:gestionar"),
+      // Agregar puntos a mano (5.39): hay que poder buscar al cliente (cliente:leer) y ajustar su libro (gestionar).
+      ajustar: p("fidelizacion:gestionar") && p("cliente:leer"),
     },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
