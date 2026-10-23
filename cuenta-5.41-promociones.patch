@@ -1,0 +1,1029 @@
+diff --git a/client/src/App.jsx b/client/src/App.jsx
+index e84930b..cb63eef 100644
+--- a/client/src/App.jsx
++++ b/client/src/App.jsx
+@@ -16,7 +16,7 @@ export default function App() {
+   const [cargando, setCargando] = useState(true);
+   const [errorGrave, setErrorGrave] = useState(null);
+   const [eligiendoOtra, setEligiendoOtra] = useState(false);
+-  const [pantalla, setPantalla] = useState("inicio"); // "inicio" | "perfil" | "admin:equipo" | "admin:catalogo" | "admin:fidelizacion" | "admin:reportes" | "admin:empresa"
++  const [pantalla, setPantalla] = useState("inicio"); // "inicio" | "perfil" | "admin:equipo" | "admin:catalogo" | "admin:fidelizacion" | "admin:promociones" | "admin:reportes" | "admin:empresa"
+   const [claveAplicada, setClaveAplicada] = useState(null); // persona+empresa para la que ya se decidió la página principal
+ 
+   const olvidarSesion = useCallback(() => {
+diff --git a/client/src/admin/Administracion.jsx b/client/src/admin/Administracion.jsx
+index dd9202e..1f79dec 100644
+--- a/client/src/admin/Administracion.jsx
++++ b/client/src/admin/Administracion.jsx
+@@ -3,14 +3,15 @@ import { capacidades, empresaActiva, seccionesVisibles } from "./permisos.js";
+ import Equipo from "./Equipo.jsx";
+ import Catalogo from "./Catalogo.jsx";
+ import Fidelizacion from "./Fidelizacion.jsx";
++import Promociones from "./Promociones.jsx";
+ import Empresa from "./Empresa.jsx";
+ import Reportes from "./Reportes.jsx";
+ import "./admin.css";
+ 
+-// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Reportes · Empresa.
++// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Promociones · Reportes · Empresa.
+ // Props:
+ //   yo               lo que devuelve `api.yo()` (ya normalizado)
+-//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "reportes" | "empresa" (viene del destino que abrió la pantalla)
++//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "promociones" | "reportes" | "empresa" (viene del destino que abrió la pantalla)
+ //   alVolver         vuelve a Inicio
+ // Sin enrutador (como el resto de `cuenta`): la pestaña vive en el estado. Solo se ofrecen las
+ // secciones que la persona puede ver; los botones de CRUD salen de `capacidades`.
+@@ -48,6 +49,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
+         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
+         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
+         {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
++        {actual === "promociones" && <Promociones cap={cap.promociones} />}
+         {actual === "reportes" && <Reportes />}
+         {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} capDatos={cap.datos} />}
+       </div>
+diff --git a/client/src/admin/Promociones.jsx b/client/src/admin/Promociones.jsx
+new file mode 100644
+index 0000000..1d283be
+--- /dev/null
++++ b/client/src/admin/Promociones.jsx
+@@ -0,0 +1,296 @@
++import { useCallback, useEffect, useRef, useState } from "react";
++import { api, comoLista, mensajeAdmin } from "./http.js";
++import { Aviso, Campo } from "./piezas.jsx";
++import PruebaPromociones from "./PruebaPromociones.jsx";
++import {
++  DIAS_SEMANA, EFECTOS_PROMOCION, TIPOS_PROMOCION,
++  formularioDePromocion, parsearPromocion, textoCuando, textoQueHace,
++} from "./promociones-logica.js";
++
++// Sección Promociones (5.41): descuentos automáticos sobre lo que lleva un pedido (2x1, «si lleva A, B con descuento»,
++// descuento directo), con vigencia, días y horario. Ver pide promocion:leer; crear, editar y pausar, promocion:gestionar.
++// Esta pantalla solo define y prueba las reglas: aplicarlas a los pedidos es de tobt (5.42), así que por ahora no cambian ningún cobro.
++
++export const MAX_ACTIVAS = 100;
++
++export function normalizarPromocion(p) {
++  return {
++    id: String(p?.id ?? ""),
++    nombre: p?.nombre ?? "",
++    descripcion: p?.descripcion ?? null,
++    activa: p?.activa !== false,
++    prioridad: p?.prioridad ?? 100,
++    acumulable: p?.acumulable === true,
++    tipo: p?.tipo ?? "",
++    objetivo: p?.objetivo ?? null,
++    disparador: p?.disparador ?? null,
++    n: p?.n ?? null,
++    m: p?.m ?? null,
++    efecto: p?.efecto ?? null,
++    valor: p?.valor ?? null,
++    vigencia: p?.vigencia ?? null,
++    dias: Array.isArray(p?.dias) ? p.dias : null,
++    horario: p?.horario ?? null,
++  };
++}
++
++// «Un producto» o «una categoría» + su valor, con las opciones del catálogo como sugerencia.
++function Selector({ etiqueta, ayuda, tipo, valor, alTipo, alValor, listaId }) {
++  return (
++    <Campo etiqueta={etiqueta} ayuda={ayuda}>
++      <span className="adm-fila-form">
++        <select aria-label={`${etiqueta}: qué se elige`} value={tipo} onChange={(e) => alTipo(e.target.value)}>
++          <option value="item">Un producto (código)</option>
++          <option value="categoria">Una categoría</option>
++        </select>
++        <input aria-label={`${etiqueta}: valor`} required maxLength={tipo === "categoria" ? 60 : 40} list={listaId[tipo]} value={valor} onChange={(e) => alValor(e.target.value)} />
++      </span>
++    </Campo>
++  );
++}
++
++export default function Promociones({ cap }) {
++  const [promos, setPromos] = useState([]);
++  const [catalogo, setCatalogo] = useState(new Map()); // código en minúsculas → ítem
++  const [cargando, setCargando] = useState(true);
++  const [error, setError] = useState("");
++  const [ok, setOk] = useState("");
++  const [formulario, setFormulario] = useState(null); // { id?, datos }
++  const [enviando, setEnviando] = useState(false);
++  const [borrador, setBorrador] = useState(null); // la promoción sin guardar que se está probando
++  const pruebaRef = useRef(null);
++
++  const cargar = useCallback(async () => {
++    setCargando(true);
++    try {
++      const [r, items] = await Promise.all([
++        api.get("promociones"),
++        api.get("catalogo/", { limite: 200 }).catch(() => []),
++      ]);
++      setPromos(comoLista(r?.promociones ?? r).map(normalizarPromocion));
++      setCatalogo(new Map(comoLista(items?.items ?? items).filter((i) => i?.codigo).map((i) => [String(i.codigo).toLowerCase(), i])));
++      setError("");
++    } catch (err) {
++      setError(mensajeAdmin(err));
++    } finally {
++      setCargando(false);
++    }
++  }, []);
++
++  useEffect(() => {
++    cargar();
++  }, [cargar]);
++
++  const categorias = [...new Set([...catalogo.values()].map((i) => i.categoria).filter(Boolean))];
++  const activas = promos.filter((p) => p.activa).length;
++
++  async function guardar(ev) {
++    ev.preventDefault();
++    const r = parsearPromocion(formulario.datos);
++    if (!r.ok) return setError(r.error);
++    setEnviando(true);
++    setError("");
++    setOk("");
++    try {
++      if (formulario.id) await api.put(`promociones/${formulario.id}`, r.cuerpo);
++      else await api.post("promociones", r.cuerpo);
++      setOk(formulario.id ? "Promoción actualizada." : "Promoción creada.");
++      setFormulario(null);
++      setBorrador(null);
++      await cargar();
++    } catch (err) {
++      setError(mensajeAdmin(err));
++    } finally {
++      setEnviando(false);
++    }
++  }
++
++  async function cambiarActiva(p, activa) {
++    setError("");
++    setOk("");
++    try {
++      await api.put(`promociones/${p.id}`, { activa });
++      setOk(activa ? "Promoción activada." : "Promoción pausada: ya no se aplica, pero se conserva.");
++      await cargar();
++    } catch (err) {
++      setError(mensajeAdmin(err));
++    }
++  }
++
++  function probarBorrador() {
++    const r = parsearPromocion(formulario.datos);
++    if (!r.ok) return setError(r.error);
++    setError("");
++    setBorrador({ ...r.cuerpo, activa: true });
++    pruebaRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
++  }
++
++  const d = formulario?.datos;
++  const campo = (k) => (e) => setFormulario((f) => ({ ...f, datos: { ...f.datos, [k]: e.target.value } }));
++  const poner = (k, v) => setFormulario((f) => ({ ...f, datos: { ...f.datos, [k]: v } }));
++  const alternarDia = (dia) => setFormulario((f) => {
++    const dias = f.datos.dias.includes(dia) ? f.datos.dias.filter((x) => x !== dia) : [...f.datos.dias, dia];
++    return { ...f, datos: { ...f.datos, dias } };
++  });
++  const listaIds = { item: "adm-promo-codigos", categoria: "adm-promo-categorias" };
++
++  return (
++    <section aria-labelledby="t-promociones">
++      <header className="adm-cabecera">
++        <h2 id="t-promociones">Promociones</h2>
++        {cap.gestionar && (
++          <div className="adm-acciones">
++            <button type="button" className="adm-btn adm-btn--primario" onClick={() => { setOk(""); setError(""); setFormulario({ datos: formularioDePromocion(null) }); }}>
++              Nueva promoción
++            </button>
++          </div>
++        )}
++      </header>
++
++      <Aviso onCerrar={() => setError("")}>{error}</Aviso>
++      <Aviso tipo="ok" onCerrar={() => setOk("")}>{ok}</Aviso>
++      <p className="adm-nota">
++        Descuentos automáticos sobre lo que lleva un pedido. Por ahora aquí solo se definen y se prueban: todavía no se aplican en los cobros de Pedidos.
++      </p>
++
++      {cargando ? (
++        <p className="adm-vacio">Cargando…</p>
++      ) : (
++        <>
++          {formulario && (
++            <form className="adm-form adm-form--ancho" onSubmit={guardar}>
++              <h3>{formulario.id ? `Editar «${d.nombre}»` : "Nueva promoción"}</h3>
++              <Campo etiqueta="Tipo">
++                <select value={d.tipo} onChange={campo("tipo")}>
++                  {TIPOS_PROMOCION.map(([id, titulo]) => (<option key={id} value={id}>{titulo}</option>))}
++                </select>
++              </Campo>
++              <Campo etiqueta="Nombre" ayuda="Lo que ve el personal al aplicarse, por ejemplo «2x1 en lattes».">
++                <input required maxLength={80} value={d.nombre} onChange={campo("nombre")} />
++              </Campo>
++              <Campo etiqueta="Descripción (opcional)"><input maxLength={200} value={d.descripcion} onChange={campo("descripcion")} /></Campo>
++
++              {d.tipo === "combo" && (
++                <Selector etiqueta="Si lleva" ayuda="Lo que dispara la promoción: por cada unidad, una del producto con descuento." tipo={d.disparadorTipo} valor={d.disparadorValor}
++                  alTipo={(v) => poner("disparadorTipo", v)} alValor={(v) => poner("disparadorValor", v)} listaId={listaIds} />
++              )}
++              <Selector
++                etiqueta={d.tipo === "combo" ? "Lo que recibe el descuento" : "Producto"}
++                ayuda={d.tipo === "nxm" ? "Cuenta las unidades de este producto o de esta categoría. En cada grupo, las más baratas son las gratis." : undefined}
++                tipo={d.objetivoTipo} valor={d.objetivoValor}
++                alTipo={(v) => poner("objetivoTipo", v)} alValor={(v) => poner("objetivoValor", v)} listaId={listaIds} />
++
++              {d.tipo === "nxm" ? (
++                <span className="adm-fila-form">
++                  <Campo etiqueta="Lleva" ayuda="2x1: lleva 2, paga 1."><input required inputMode="numeric" value={d.n} onChange={campo("n")} /></Campo>
++                  <Campo etiqueta="Paga"><input required inputMode="numeric" value={d.m} onChange={campo("m")} /></Campo>
++                </span>
++              ) : (
++                <span className="adm-fila-form">
++                  <Campo etiqueta="Descuento">
++                    <select value={d.efecto} onChange={campo("efecto")}>
++                      {EFECTOS_PROMOCION.map(([id, titulo]) => (<option key={id} value={id}>{titulo}</option>))}
++                    </select>
++                  </Campo>
++                  {d.efecto !== "gratis" && (
++                    <Campo etiqueta={d.efecto === "porcentaje" ? "Porcentaje (1 a 100)" : "Monto por unidad"}>
++                      <input required inputMode="decimal" value={d.valor} onChange={campo("valor")} />
++                    </Campo>
++                  )}
++                </span>
++              )}
++
++              <fieldset className="adm-cuando">
++                <legend>Cuándo rige (todo opcional)</legend>
++                <span className="adm-fila-form">
++                  <Campo etiqueta="Desde el día"><input type="date" value={d.desde} onChange={campo("desde")} /></Campo>
++                  <Campo etiqueta="Hasta el día" ayuda="Incluido."><input type="date" value={d.hasta} onChange={campo("hasta")} /></Campo>
++                </span>
++                <div className="adm-dias" role="group" aria-label="Días de la semana">
++                  {DIAS_SEMANA.map(([dia, nombre]) => (
++                    <label key={dia} className="adm-check">
++                      <input type="checkbox" checked={d.dias.includes(dia)} onChange={() => alternarDia(dia)} /> {nombre}
++                    </label>
++                  ))}
++                </div>
++                <small className="adm-nota">Sin marcar ningún día, rige todos.</small>
++                <span className="adm-fila-form">
++                  <Campo etiqueta="Desde las"><input type="time" value={d.horaDesde} onChange={campo("horaDesde")} /></Campo>
++                  <Campo etiqueta="Hasta las" ayuda="Esa hora ya no cuenta. Puede cruzar la medianoche (22:00 a 02:00)."><input type="time" value={d.horaHasta} onChange={campo("horaHasta")} /></Campo>
++                </span>
++                <small className="adm-nota">Días y horas se leen con la hora de la empresa.</small>
++              </fieldset>
++
++              <Campo etiqueta="Prioridad" ayuda="Si dos promociones coinciden en un producto, gana la de número menor. Un producto recibe una sola, salvo que ambas sean acumulables.">
++                <input required inputMode="numeric" value={d.prioridad} onChange={campo("prioridad")} />
++              </Campo>
++              <label className="adm-check">
++                <input type="checkbox" checked={d.acumulable} onChange={(e) => poner("acumulable", e.target.checked)} />
++                Se puede sumar a otra promoción acumulable
++              </label>
++              <label className="adm-check">
++                <input type="checkbox" checked={d.activa} onChange={(e) => poner("activa", e.target.checked)} />
++                Activa
++              </label>
++
++              <div className="adm-acciones">
++                <button type="submit" className="adm-btn adm-btn--primario" disabled={enviando}>{enviando ? "Guardando…" : "Guardar"}</button>
++                <button type="button" className="adm-btn" onClick={probarBorrador}>Probar esta promoción</button>
++                <button type="button" className="adm-btn" onClick={() => { setFormulario(null); setBorrador(null); }}>Cancelar</button>
++              </div>
++            </form>
++          )}
++
++          <datalist id="adm-promo-codigos">
++            {[...catalogo.values()].map((i) => (<option key={i.codigo} value={i.codigo} label={i.nombre} />))}
++          </datalist>
++          <datalist id="adm-promo-categorias">
++            {categorias.map((c) => (<option key={c} value={c} />))}
++          </datalist>
++
++          {promos.length === 0 ? (
++            <p className="adm-vacio">Todavía no hay promociones. Crea una, por ejemplo un 2x1 en un producto.</p>
++          ) : (
++            <>
++              <p className="adm-nota">{activas} de {MAX_ACTIVAS} activas.</p>
++              <div className="adm-tabla-caja">
++                <table className="adm-tabla">
++                  <thead>
++                    <tr><th>Promoción</th><th>Qué hace</th><th>Cuándo</th><th className="adm-num">Prioridad</th>{cap.gestionar && <th />}</tr>
++                  </thead>
++                  <tbody>
++                    {promos.map((p) => (
++                      <tr key={p.id} className={p.activa ? "" : "adm-fila--baja"}>
++                        <td>
++                          {p.nombre}{!p.activa && <em> (pausada)</em>}{p.acumulable && <small className="adm-falta" style={{ display: "block" }}>Acumulable</small>}
++                          {p.descripcion && <small className="adm-falta" style={{ display: "block" }}>{p.descripcion}</small>}
++                        </td>
++                        <td>{textoQueHace(p)}</td>
++                        <td>{textoCuando(p)}</td>
++                        <td className="adm-num">{p.prioridad}</td>
++                        {cap.gestionar && (
++                          <td className="adm-celda-acciones">
++                            <button type="button" className="adm-btn" onClick={() => { setOk(""); setError(""); setBorrador(null); setFormulario({ id: p.id, datos: formularioDePromocion(p) }); }}>Editar</button>
++                            {p.activa ? (
++                              <button type="button" className="adm-btn" onClick={() => cambiarActiva(p, false)}>Pausar</button>
++                            ) : (
++                              <button type="button" className="adm-btn" onClick={() => cambiarActiva(p, true)}>Activar</button>
++                            )}
++                          </td>
++                        )}
++                      </tr>
++                    ))}
++                  </tbody>
++                </table>
++              </div>
++            </>
++          )}
++
++          <div ref={pruebaRef}>
++            <PruebaPromociones catalogo={catalogo} borrador={borrador} alQuitarBorrador={() => setBorrador(null)} />
++          </div>
++        </>
++      )}
++    </section>
++  );
++}
+diff --git a/client/src/admin/PruebaPromociones.jsx b/client/src/admin/PruebaPromociones.jsx
+new file mode 100644
+index 0000000..0ba91e9
+--- /dev/null
++++ b/client/src/admin/PruebaPromociones.jsx
+@@ -0,0 +1,161 @@
++import { useState } from "react";
++import { api, mensajeAdmin } from "./http.js";
++import { Aviso, Campo } from "./piezas.jsx";
++import { formatoPrecio } from "./formato.js";
++import { MAX_LINEAS_PRUEBA, ahoraDeNavegador, lineaDePrueba, parsearItemsPrueba } from "./promociones-logica.js";
++
++// «Probar con un pedido de ejemplo» (5.41): arma un pedido a mano y pide al núcleo que calcule las promociones
++// (POST /promociones/simular). No guarda nada ni toca ningún pedido. Con un `borrador` (la promoción que se está
++// editando, aún sin guardar) se suma a las activas, o se prueba ella sola.
++
++const dinero = (n) => formatoPrecio(n, null);
++
++export default function PruebaPromociones({ catalogo, borrador, alQuitarBorrador }) {
++  const [filas, setFilas] = useState([lineaDePrueba(), lineaDePrueba()]);
++  const [cuando, setCuando] = useState("");
++  const [solo, setSolo] = useState(false);
++  const [calculando, setCalculando] = useState(false);
++  const [resultado, setResultado] = useState(null); // { items, datos, borradorNombre }
++  const [error, setError] = useState("");
++
++  const cambiar = (i, campo, valor) =>
++    setFilas((fs) =>
++      fs.map((f, j) => {
++        if (j !== i) return f;
++        const nueva = { ...f, [campo]: valor };
++        // Al escribir un código que está en el catálogo se completan la categoría y el precio, si estaban vacíos.
++        if (campo === "codigo") {
++          const it = catalogo.get(String(valor).trim().toLowerCase());
++          if (it) {
++            if (!f.categoria) nueva.categoria = it.categoria ?? "";
++            if (!f.precio && it.precio !== null && it.precio !== undefined) nueva.precio = String(it.precio);
++          }
++        }
++        return nueva;
++      }),
++    );
++
++  async function calcular(ev) {
++    ev.preventDefault();
++    const r = parsearItemsPrueba(filas);
++    if (!r.ok) return setError(r.error);
++    const ahora = ahoraDeNavegador(cuando);
++    if (cuando && !ahora) return setError("La fecha y hora no son válidas.");
++    setCalculando(true);
++    setError("");
++    try {
++      const cuerpo = { items: r.items };
++      if (ahora) cuerpo.ahora = ahora;
++      if (borrador) {
++        cuerpo.borrador = borrador;
++        if (solo) cuerpo.soloBorrador = true;
++      }
++      const datos = await api.post("promociones/simular", cuerpo);
++      setResultado({ items: r.items, datos, borradorNombre: borrador?.nombre ?? null });
++    } catch (err) {
++      setError(mensajeAdmin(err));
++    } finally {
++      setCalculando(false);
++    }
++  }
++
++  const d = resultado?.datos;
++  return (
++    <section className="adm-form adm-prueba" aria-labelledby="t-prueba-promos" id="prueba-promociones">
++      <h3 id="t-prueba-promos">Probar con un pedido de ejemplo</h3>
++      <p className="adm-nota">Arma un pedido y mira qué descuentos se aplicarían ahora, o a otra fecha y hora. No guarda nada ni toca ningún pedido.</p>
++
++      {borrador && (
++        <div className="adm-aviso aviso-ok" role="status">
++          <span>
++            Probando también «{borrador.nombre}», que aún no está guardada.{" "}
++            <label className="adm-check">
++              <input type="checkbox" checked={solo} onChange={(e) => setSolo(e.target.checked)} /> Solo esta promoción
++            </label>
++          </span>
++          <button type="button" className="adm-link" onClick={alQuitarBorrador} aria-label="Dejar de probar la promoción sin guardar">×</button>
++        </div>
++      )}
++      <Aviso onCerrar={() => setError("")}>{error}</Aviso>
++
++      <form onSubmit={calcular}>
++        <div className="adm-tabla-caja">
++          <table className="adm-tabla">
++            <thead>
++              <tr><th>Producto (código)</th><th>Categoría</th><th className="adm-num">Cantidad</th><th className="adm-num">Precio de una unidad</th><th /></tr>
++            </thead>
++            <tbody>
++              {filas.map((f, i) => (
++                <tr key={i}>
++                  <td><input aria-label={`Fila ${i + 1}: código`} list="adm-prueba-codigos" maxLength={40} value={f.codigo} onChange={(e) => cambiar(i, "codigo", e.target.value)} /></td>
++                  <td><input aria-label={`Fila ${i + 1}: categoría`} list="adm-prueba-categorias" maxLength={60} value={f.categoria} onChange={(e) => cambiar(i, "categoria", e.target.value)} /></td>
++                  <td className="adm-num"><input aria-label={`Fila ${i + 1}: cantidad`} inputMode="numeric" size={3} value={f.cantidad} onChange={(e) => cambiar(i, "cantidad", e.target.value)} /></td>
++                  <td className="adm-num"><input aria-label={`Fila ${i + 1}: precio`} inputMode="decimal" size={7} value={f.precio} onChange={(e) => cambiar(i, "precio", e.target.value)} /></td>
++                  <td>
++                    {filas.length > 1 && (
++                      <button type="button" className="adm-link" aria-label={`Quitar la fila ${i + 1}`} onClick={() => setFilas((fs) => fs.filter((_, j) => j !== i))}>×</button>
++                    )}
++                  </td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++        <datalist id="adm-prueba-codigos">
++          {[...catalogo.values()].slice(0, 200).map((it) => (<option key={it.codigo} value={it.codigo} label={it.nombre} />))}
++        </datalist>
++        <datalist id="adm-prueba-categorias">
++          {[...new Set([...catalogo.values()].map((it) => it.categoria).filter(Boolean))].map((c) => (<option key={c} value={c} />))}
++        </datalist>
++        <div className="adm-acciones">
++          <button type="button" className="adm-btn" disabled={filas.length >= MAX_LINEAS_PRUEBA} onClick={() => setFilas((fs) => [...fs, lineaDePrueba()])}>+ Agregar producto</button>
++        </div>
++        <Campo etiqueta="Fecha y hora (opcional)" ayuda="Para probar un horario o un día de la semana. Se toma con la hora de tu navegador; sin ella, se usa el momento actual.">
++          <input type="datetime-local" value={cuando} onChange={(e) => setCuando(e.target.value)} />
++        </Campo>
++        <div className="adm-acciones">
++          <button type="submit" className="adm-btn adm-btn--primario" disabled={calculando}>{calculando ? "Calculando…" : "Calcular"}</button>
++        </div>
++      </form>
++
++      {d && (
++        <div className="adm-resultado" aria-live="polite">
++          <h4>Resultado</h4>
++          <div className="adm-tabla-caja">
++            <table className="adm-tabla">
++              <thead>
++                <tr><th>Producto</th><th className="adm-num">Cant.</th><th className="adm-num">Sin promoción</th><th className="adm-num">Descuento</th><th className="adm-num">A pagar</th><th>Promoción</th></tr>
++              </thead>
++              <tbody>
++                {d.lineas.map((l, i) => (
++                  <tr key={l.id ?? i}>
++                    <td>{resultado.items[i]?.codigo}</td>
++                    <td className="adm-num">{resultado.items[i]?.cantidad}</td>
++                    <td className="adm-num">{dinero(l.subtotalBase)}</td>
++                    <td className="adm-num">{l.descuento > 0 ? `−${dinero(l.descuento)}` : "—"}</td>
++                    <td className="adm-num">{dinero(l.subtotal)}</td>
++                    <td>{l.promociones.length ? l.promociones.map((p) => p.nombre).join(", ") : "—"}</td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++          <dl className="adm-datos">
++            <dt>Sin promociones</dt><dd>{dinero(d.totalBase)}</dd>
++            <dt>Descuento</dt><dd>{d.descuentoTotal > 0 ? `−${dinero(d.descuentoTotal)}` : dinero(0)}</dd>
++            <dt>Total</dt><dd><strong>{dinero(d.total)}</strong></dd>
++          </dl>
++          {d.aplicadas.length === 0 ? (
++            <p className="adm-vacio">Ninguna promoción se aplica a este pedido en ese momento{d.vigentes.length === 0 ? " (no hay promociones vigentes)" : ""}.</p>
++          ) : (
++            <ul className="adm-aplicadas">
++              {d.aplicadas.map((a) => (
++                <li key={a.id}>{a.nombre}: {a.veces} {a.veces === 1 ? "unidad" : "unidades"}, −{dinero(a.monto)}</li>
++              ))}
++            </ul>
++          )}
++        </div>
++      )}
++    </section>
++  );
++}
+diff --git a/client/src/admin/admin.css b/client/src/admin/admin.css
+index 58a2ba9..b87bb06 100644
+--- a/client/src/admin/admin.css
++++ b/client/src/admin/admin.css
+@@ -79,3 +79,18 @@
+ /* Agregar puntos a un cliente (5.39) */
+ .adm-lista-clientes { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+ .adm-lista-clientes .adm-btn { width: 100%; text-align: left; }
++
++/* Promociones (5.41) */
++.adm-form--ancho { max-width: 640px; }
++.adm-fila-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
++.adm-fila-form > * { flex: 1 1 160px; min-width: 0; }
++.adm-fila-form select, .adm-fila-form input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--color-borde); background: var(--color-superficie); color: var(--color-texto); box-sizing: border-box; width: 100%; }
++.adm-cuando { border: 1px solid var(--color-borde); border-radius: var(--radio); margin: 12px 0; padding: 8px 12px 12px; }
++.adm-cuando legend { padding: 0 6px; font-weight: 600; }
++.adm-dias { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0 4px; }
++.adm-prueba { max-width: none; }
++.adm-prueba .adm-tabla input { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--color-borde); background: var(--color-superficie); color: var(--color-texto); box-sizing: border-box; width: 100%; min-width: 4rem; }
++.adm-resultado { margin-top: 16px; }
++.adm-resultado h4 { margin: 0 0 8px; }
++.adm-aplicadas { margin: 8px 0 0; padding-left: 20px; }
++
+diff --git a/client/src/admin/permisos.js b/client/src/admin/permisos.js
+index c9ccc59..a171bea 100644
+--- a/client/src/admin/permisos.js
++++ b/client/src/admin/permisos.js
+@@ -4,6 +4,7 @@
+ // las comprobaciones de cada operación del núcleo.
+ import { permite } from "../destinos.js";
+ import { SERVICIO_REPORTES } from "./reportes-logica.js";
++import { SERVICIO_PROMOCIONES } from "./promociones-logica.js";
+ 
+ export { permite };
+ 
+@@ -33,6 +34,8 @@ export function capacidades(permisos) {
+       // Agregar puntos a mano (5.39): hay que poder buscar al cliente (cliente:leer) y ajustar su libro (gestionar).
+       ajustar: p("fidelizacion:gestionar") && p("cliente:leer"),
+     },
++    // Promociones (5.41). La lista y la simulación piden promocion:leer en el servidor; quien gestiona también debe poder leer.
++    promociones: { ver: p("promocion:leer"), gestionar: p("promocion:gestionar") && p("promocion:leer") },
+     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
+     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
+     datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
+@@ -41,8 +44,8 @@ export function capacidades(permisos) {
+ }
+ 
+ // Pestañas que se ofrecen: solo las que la persona puede al menos ver. `servicios` (los códigos contratados por la
+-// empresa activa, de /auth/yo) es opcional: si llega, Reportes solo se ofrece cuando la empresa tiene el servicio que
+-// los calcula (sin él la ruta no existe). Mostrar u ocultar no es seguridad: manda `reporte:leer` en el servidor.
++// empresa activa, de /auth/yo) es opcional: si llega, Reportes (y Promociones) solo se ofrecen cuando la empresa tiene el servicio que
++// los calcula (o las aplica) (sin él la ruta no existe). Mostrar u ocultar no es seguridad: manda `reporte:leer` en el servidor.
+ export function seccionesVisibles(permisos, servicios) {
+   const c = capacidades(permisos);
+   const tieneServicio = (codigo) => !Array.isArray(servicios) || servicios.includes(codigo);
+@@ -50,6 +53,7 @@ export function seccionesVisibles(permisos, servicios) {
+     { id: "equipo", titulo: "Equipo", visible: c.equipo.ver },
+     { id: "catalogo", titulo: "Catálogo", visible: c.catalogo.ver },
+     { id: "fidelizacion", titulo: "Fidelización", visible: c.fidelizacion.ver },
++    { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
+     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
+     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
+   ].filter((s) => s.visible);
+diff --git a/client/src/admin/promociones-logica.js b/client/src/admin/promociones-logica.js
+new file mode 100644
+index 0000000..5938fb5
+--- /dev/null
++++ b/client/src/admin/promociones-logica.js
+@@ -0,0 +1,210 @@
++// Lógica pura de la pantalla de Promociones (5.41): formulario ↔ cuerpo de la API, y los textos que describen
++// una promoción. Sin React ni navegador, para probarla con `node --test`. Las reglas de verdad viven en el núcleo
++// (core/src/promociones/validacion.js): aquí solo se avisa pronto y con palabras claras; el servidor valida siempre.
++
++// Las promociones las calcula el núcleo pero hoy solo las aplica tobt (a los pedidos, 5.42): sin ese servicio la
++// pestaña no se ofrece, igual que Reportes.
++export const SERVICIO_PROMOCIONES = "tobt";
++
++export const TIPOS_PROMOCION = [
++  ["nxm", "Lleva N, paga M (2x1, 3x2)"],
++  ["combo", "Si lleva A, B con descuento"],
++  ["directo", "Descuento directo"],
++];
++export const EFECTOS_PROMOCION = [
++  ["porcentaje", "Porcentaje"],
++  ["monto", "Monto fijo por unidad"],
++  ["gratis", "Gratis"],
++];
++// De lunes a domingo (el núcleo cuenta 0 = domingo)
++export const DIAS_SEMANA = [[1, "Lun"], [2, "Mar"], [3, "Mié"], [4, "Jue"], [5, "Vie"], [6, "Sáb"], [0, "Dom"]];
++export const MAX_LINEAS_PRUEBA = 20;
++
++const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
++const CODIGO = /^[A-Za-z0-9._\-/]{1,40}$/;
++const aNumero = (t) => (String(t ?? "").trim() === "" ? NaN : Number(String(t).trim().replace(",", ".")));
++const dosDecimales = (v) => Math.abs(v * 100 - Math.round(v * 100)) < 1e-6;
++const textoDe = (t) => String(t ?? "").trim();
++
++// ---------- formulario ----------
++
++const selectorAForm = (s) => (s?.categoria ? { tipo: "categoria", valor: s.categoria } : { tipo: "item", valor: s?.itemCodigo ?? "" });
++
++/** El formulario (todo texto) de una promoción, o el de una nueva si `p` es null. */
++export function formularioDePromocion(p) {
++  const objetivo = selectorAForm(p?.objetivo);
++  const disparador = selectorAForm(p?.disparador);
++  return {
++    tipo: p?.tipo ?? "nxm",
++    nombre: p?.nombre ?? "",
++    descripcion: p?.descripcion ?? "",
++    objetivoTipo: objetivo.tipo,
++    objetivoValor: objetivo.valor,
++    disparadorTipo: disparador.tipo,
++    disparadorValor: disparador.valor,
++    n: String(p?.n ?? 2),
++    m: String(p?.m ?? 1),
++    efecto: p?.efecto ?? "porcentaje",
++    valor: p?.valor === null || p?.valor === undefined ? "" : String(p.valor),
++    desde: p?.vigencia?.desde ?? "",
++    hasta: p?.vigencia?.hasta ?? "",
++    dias: Array.isArray(p?.dias) ? [...p.dias] : [],
++    horaDesde: p?.horario?.desde ?? "",
++    horaHasta: p?.horario?.hasta ?? "",
++    prioridad: String(p?.prioridad ?? 100),
++    acumulable: p?.acumulable === true,
++    activa: p?.activa !== false,
++  };
++}
++
++function selector(tipo, valor, nombre) {
++  const v = textoDe(valor);
++  if (!v) return { error: `${nombre}: escribe ${tipo === "categoria" ? "la categoría" : "el código del ítem"}.` };
++  if (tipo === "categoria") {
++    if (v.length > 60) return { error: `${nombre}: la categoría puede tener hasta 60 caracteres.` };
++    return { valor: { categoria: v } };
++  }
++  if (!CODIGO.test(v)) return { error: `${nombre}: el código solo lleva letras, números, punto, guion o barra (hasta 40).` };
++  return { valor: { itemCodigo: v } };
++}
++
++/**
++ * El formulario → el cuerpo que se envía, o { ok: false, error }. El cuerpo lleva solo los campos del tipo elegido
++ * (el núcleo rechaza los que no le corresponden) y `null` en vigencia, días y horario cuando están vacíos, para
++ * que al editar se quiten de verdad.
++ */
++export function parsearPromocion(f) {
++  const nombre = textoDe(f.nombre);
++  if (!nombre) return { ok: false, error: "Ponle un nombre a la promoción." };
++  if (nombre.length > 80) return { ok: false, error: "El nombre puede tener hasta 80 caracteres." };
++  const descripcion = textoDe(f.descripcion);
++  if (descripcion.length > 200) return { ok: false, error: "La descripción puede tener hasta 200 caracteres." };
++  const prioridad = aNumero(f.prioridad);
++  if (!Number.isInteger(prioridad) || prioridad < 0 || prioridad > 1000) return { ok: false, error: "La prioridad es un número entero de 0 a 1000 (menor se evalúa antes)." };
++
++  const cuerpo = { nombre, descripcion: descripcion || null, tipo: f.tipo, prioridad, acumulable: f.acumulable === true, activa: f.activa !== false };
++
++  const objetivo = selector(f.objetivoTipo, f.objetivoValor, f.tipo === "combo" ? "Lo que recibe el descuento" : "Producto");
++  if (objetivo.error) return { ok: false, error: objetivo.error };
++  cuerpo.objetivo = objetivo.valor;
++
++  if (f.tipo === "nxm") {
++    const n = aNumero(f.n);
++    const m = aNumero(f.m);
++    if (!Number.isInteger(n) || n < 2 || n > 10) return { ok: false, error: "«Lleva» es un entero de 2 a 10." };
++    if (!Number.isInteger(m) || m < 1) return { ok: false, error: "«Paga» es un entero desde 1." };
++    if (m >= n) return { ok: false, error: "«Paga» tiene que ser menor que «lleva» (2x1: lleva 2, paga 1)." };
++    cuerpo.n = n;
++    cuerpo.m = m;
++  } else if (f.tipo === "combo" || f.tipo === "directo") {
++    if (f.tipo === "combo") {
++      const d = selector(f.disparadorTipo, f.disparadorValor, "Si lleva");
++      if (d.error) return { ok: false, error: d.error };
++      cuerpo.disparador = d.valor;
++    }
++    cuerpo.efecto = f.efecto;
++    if (f.efecto === "gratis") cuerpo.valor = null;
++    else {
++      const v = aNumero(f.valor);
++      if (!Number.isFinite(v) || v <= 0 || !dosDecimales(v)) return { ok: false, error: "El valor del descuento es un número mayor que 0, con hasta 2 decimales." };
++      if (f.efecto === "porcentaje" && v > 100) return { ok: false, error: "Un porcentaje no puede pasar de 100." };
++      if (f.efecto === "monto" && v > 1_000_000) return { ok: false, error: "El monto no puede pasar de 1.000.000." };
++      cuerpo.valor = v;
++    }
++  } else {
++    return { ok: false, error: "Elige el tipo de promoción." };
++  }
++
++  const desde = textoDe(f.desde);
++  const hasta = textoDe(f.hasta);
++  if (desde && hasta && hasta < desde) return { ok: false, error: "La fecha «hasta» no puede ser antes que «desde»." };
++  cuerpo.vigencia = desde || hasta ? { desde: desde || null, hasta: hasta || null } : null;
++
++  const dias = [...new Set((f.dias ?? []).map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort((a, b) => a - b);
++  cuerpo.dias = dias.length ? dias : null;
++
++  const hd = textoDe(f.horaDesde);
++  const hh = textoDe(f.horaHasta);
++  if (!!hd !== !!hh) return { ok: false, error: "El horario necesita las dos horas, «desde» y «hasta» (o ninguna)." };
++  if (hd && hd === hh) return { ok: false, error: "Las horas «desde» y «hasta» no pueden ser iguales." };
++  cuerpo.horario = hd ? { desde: hd, hasta: hh } : null;
++
++  return { ok: true, cuerpo };
++}
++
++// ---------- textos ----------
++
++const lugar = (s) => (s?.categoria ? `la categoría «${s.categoria}»` : `«${s?.itemCodigo ?? "?"}»`);
++const numeroEs = (n) => String(n).replace(".", ",");
++
++function textoEfecto(p) {
++  if (p.efecto === "gratis") return "gratis";
++  if (p.efecto === "porcentaje") return `${numeroEs(p.valor)} % de descuento`;
++  return `${numeroEs(Number(p.valor).toFixed(2))} de descuento por unidad`;
++}
++
++/** Qué hace, en una frase. */
++export function textoQueHace(p) {
++  if (p.tipo === "nxm") return `Lleva ${p.n}, paga ${p.m}: ${lugar(p.objetivo)}`;
++  if (p.tipo === "combo") return `Si lleva ${lugar(p.disparador)}, ${lugar(p.objetivo)} con ${textoEfecto(p)}`;
++  return `${textoEfecto(p).replace(/^./, (c) => c.toUpperCase())} en ${lugar(p.objetivo)}`;
++}
++
++/** «2026-11-01» → «1 nov 2026» (sin pasar por Date: no hay zona que lo cambie de día). */
++export function fechaCorta(iso) {
++  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ""));
++  return m ? `${Number(m[3])} ${MESES[Number(m[2]) - 1]} ${m[1]}` : String(iso ?? "");
++}
++
++/** Cuándo rige, en una frase. Sin condiciones: «Siempre». */
++export function textoCuando(p) {
++  const partes = [];
++  if (Array.isArray(p.dias) && p.dias.length) {
++    const etiqueta = Object.fromEntries(DIAS_SEMANA);
++    partes.push(p.dias.length === 7 ? "Todos los días" : [...p.dias].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => etiqueta[d]).join(", "));
++  }
++  if (p.horario?.desde) partes.push(`${p.horario.desde} a ${p.horario.hasta}`);
++  const v = p.vigencia;
++  if (v?.desde && v?.hasta) partes.push(`del ${fechaCorta(v.desde)} al ${fechaCorta(v.hasta)}`);
++  else if (v?.desde) partes.push(`desde el ${fechaCorta(v.desde)}`);
++  else if (v?.hasta) partes.push(`hasta el ${fechaCorta(v.hasta)}`);
++  return partes.length ? partes.join(" · ") : "Siempre";
++}
++
++// ---------- probar con un pedido de ejemplo ----------
++
++export const lineaDePrueba = () => ({ codigo: "", categoria: "", cantidad: "1", precio: "" });
++
++/**
++ * Las filas del formulario de prueba → `items` de POST /promociones/simular, o { ok: false, error }. Una fila
++ * completamente vacía se ignora; el `id` es la posición entre las filas usadas, para ubicar el resultado.
++ */
++export function parsearItemsPrueba(filas) {
++  const items = [];
++  for (const [i, f] of (filas ?? []).entries()) {
++    const codigo = textoDe(f.codigo);
++    const vacia = !codigo && !textoDe(f.categoria) && !textoDe(f.precio);
++    if (vacia) continue;
++    const fila = `Fila ${i + 1}`;
++    if (!codigo || codigo.length > 40) return { ok: false, error: `${fila}: escribe el código del producto (hasta 40 caracteres).` };
++    const cantidad = aNumero(f.cantidad);
++    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 99) return { ok: false, error: `${fila}: la cantidad es un entero de 1 a 99.` };
++    const precio = aNumero(f.precio);
++    if (!Number.isFinite(precio) || precio < 0 || precio > 1_000_000) return { ok: false, error: `${fila}: el precio de una unidad es un número desde 0.` };
++    const categoria = textoDe(f.categoria);
++    items.push({ id: String(items.length), codigo, categoria: categoria || null, cantidad, precio });
++  }
++  if (!items.length) return { ok: false, error: "Agrega al menos un producto con su precio." };
++  return { ok: true, items };
++}
++
++/**
++ * «2026-10-22T20:00» (el valor de un campo datetime-local) → ISO, con la hora de ESTE navegador; null si no es válida.
++ * El núcleo la lee en la zona de la empresa: si el navegador está en otra zona, la hora puede correrse.
++ */
++export function ahoraDeNavegador(valor) {
++  const t = textoDe(valor);
++  if (!t) return null;
++  const d = new Date(t);
++  return Number.isNaN(d.getTime()) ? null : d.toISOString();
++}
+diff --git a/client/src/destinos.js b/client/src/destinos.js
+index 81782e3..2000740 100644
+--- a/client/src/destinos.js
++++ b/client/src/destinos.js
+@@ -59,6 +59,15 @@ export const DESTINOS = [
+     disponible: true,
+     abre: { pantalla: "admin:fidelizacion" },
+   },
++  {
++    id: "empresa.promociones",
++    titulo: "Promociones",
++    descripcion: "2x1, descuentos por combo y por horario.",
++    requiere: "promocion:leer",
++    servicio: "tobt",
++    disponible: true,
++    abre: { pantalla: "admin:promociones" },
++  },
+   {
+     id: "empresa.reportes",
+     titulo: "Reportes",
+diff --git a/test/admin.test.js b/test/admin.test.js
+index 9a3d6e3..9a19a74 100644
+--- a/test/admin.test.js
++++ b/test/admin.test.js
+@@ -21,7 +21,7 @@ test("admin (*) ve todas las pestañas y puede todo", () => {
+   assert.ok(c.equipo.crear && c.equipo.editar && c.equipo.baja);
+   assert.ok(c.catalogo.crear && c.catalogo.editar && c.catalogo.baja);
+   assert.ok(c.roles.ver && c.roles.gestionar);
+-  assert.deepEqual(ids(["*"]), ["equipo", "catalogo", "fidelizacion", "reportes", "empresa"]);
++  assert.deepEqual(ids(["*"]), ["equipo", "catalogo", "fidelizacion", "promociones", "reportes", "empresa"]);
+ });
+ 
+ test("mesero (catalogo:leer): ve Catálogo y Empresa, sin botones de escritura ni roles", () => {
+@@ -51,7 +51,7 @@ test("sin permisos o con una respuesta rara: solo Empresa (fallo seguro)", () =>
+ 
+ test("cada destino que abre una pantalla de admin existe y respeta los permisos de su pestaña", () => {
+   const abre = DESTINOS.filter((d) => d.disponible && d.abre?.pantalla?.startsWith("admin:"));
+-  assert.deepEqual(abre.map((d) => d.abre.pantalla).sort(), ["admin:catalogo", "admin:empresa", "admin:equipo", "admin:fidelizacion", "admin:reportes"]);
++  assert.deepEqual(abre.map((d) => d.abre.pantalla).sort(), ["admin:catalogo", "admin:empresa", "admin:equipo", "admin:fidelizacion", "admin:promociones", "admin:reportes"]);
+   const reportes = abre.find((d) => d.abre.pantalla === "admin:reportes");
+   assert.equal(reportes.requiere, "reporte:leer");
+   assert.equal(reportes.servicio, "tobt");
+@@ -68,7 +68,7 @@ test("reportes: los ve quien tiene reporte:leer (o reporte:*), y solo si la empr
+   for (const sin of [[], undefined, null, ["documento:leer", "catalogo:leer", "estacion:administracion"], ["reportes:leer"]])
+     assert.ok(!capacidades(sin).reportes.ver, JSON.stringify(sin));
+   assert.deepEqual(ids(["reporte:leer"]), ["reportes", "empresa"]);
+-  assert.deepEqual(seccionesVisibles(["*"], ["tobt"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "reportes", "empresa"]);
++  assert.deepEqual(seccionesVisibles(["*"], ["tobt"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "promociones", "reportes", "empresa"]);
+   assert.deepEqual(seccionesVisibles(["*"], ["siscore"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "empresa"]);
+   assert.deepEqual(seccionesVisibles(["*"], []).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "empresa"]);
+   assert.deepEqual(seccionesVisibles(["reporte:leer"], ["tobt"]).map((s) => s.id), ["reportes", "empresa"]);
+diff --git a/test/destinos.test.js b/test/destinos.test.js
+index 3654885..daa5202 100644
+--- a/test/destinos.test.js
++++ b/test/destinos.test.js
+@@ -61,7 +61,7 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) =>
+ 
+ test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
+   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
+-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
++  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+   assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
+   assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
+   assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
+@@ -69,7 +69,7 @@ test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina
+ });
+ 
+ test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
+-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
++  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+   assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
+   assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
+ });
+diff --git a/test/promociones-logica.test.js b/test/promociones-logica.test.js
+new file mode 100644
+index 0000000..88a48f1
+--- /dev/null
++++ b/test/promociones-logica.test.js
+@@ -0,0 +1,159 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import {
++  formularioDePromocion, parsearPromocion, textoQueHace, textoCuando, fechaCorta,
++  parsearItemsPrueba, lineaDePrueba, ahoraDeNavegador, DIAS_SEMANA, SERVICIO_PROMOCIONES,
++} from "../client/src/admin/promociones-logica.js";
++import { capacidades, seccionesVisibles } from "../client/src/admin/permisos.js";
++import { DESTINOS, destinosAccesibles } from "../client/src/destinos.js";
++
++const form = (o = {}) => ({ ...formularioDePromocion(null), nombre: "2x1 en lattes", objetivoValor: "LATTE", ...o });
++const ok = (f) => {
++  const r = parsearPromocion(f);
++  assert.equal(r.ok, true, r.error);
++  return r.cuerpo;
++};
++const mal = (f, texto) => {
++  const r = parsearPromocion(f);
++  assert.equal(r.ok, false);
++  if (texto) assert.match(r.error, texto);
++};
++
++test("el formulario vacío es un 2x1 listo para rellenar", () => {
++  const f = formularioDePromocion(null);
++  assert.deepEqual([f.tipo, f.n, f.m, f.prioridad, f.activa, f.acumulable, f.objetivoTipo], ["nxm", "2", "1", "100", true, false, "item"]);
++});
++
++test("un 2x1: el cuerpo lleva solo lo del tipo, y vigencia, días y horario en null cuando están vacíos", () => {
++  assert.deepEqual(ok(form()), {
++    nombre: "2x1 en lattes", descripcion: null, tipo: "nxm", prioridad: 100, acumulable: false, activa: true,
++    objetivo: { itemCodigo: "LATTE" }, n: 2, m: 1, vigencia: null, dias: null, horario: null,
++  });
++});
++
++test("un combo lleva disparador, efecto y valor; un directo gratis lleva valor null", () => {
++  const combo = ok(form({ tipo: "combo", disparadorValor: "SAND", objetivoTipo: "categoria", objetivoValor: "Cafés", efecto: "porcentaje", valor: "50" }));
++  assert.deepEqual([combo.disparador, combo.objetivo, combo.efecto, combo.valor], [{ itemCodigo: "SAND" }, { categoria: "Cafés" }, "porcentaje", 50]);
++  assert.equal("n" in combo, false);
++  const gratis = ok(form({ tipo: "directo", efecto: "gratis", valor: "99" }));
++  assert.deepEqual([gratis.efecto, gratis.valor], ["gratis", null]);
++  assert.equal("disparador" in gratis, false);
++});
++
++test("acepta coma decimal, y valida el descuento como el núcleo", () => {
++  assert.equal(ok(form({ tipo: "directo", efecto: "monto", valor: "2,5" })).valor, 2.5);
++  for (const valor of ["", "0", "-1", "abc", "1,234"]) mal(form({ tipo: "directo", efecto: "monto", valor }), /valor del descuento/);
++  mal(form({ tipo: "directo", efecto: "porcentaje", valor: "101" }), /100/);
++});
++
++test("2x1: lleva de 2 a 10 y paga menos que lleva", () => {
++  mal(form({ n: "1" }), /2 a 10/);
++  mal(form({ n: "11" }), /2 a 10/);
++  mal(form({ n: "2", m: "2" }), /menor/);
++  mal(form({ n: "2.5" }), /entero/);
++  const c = ok(form({ n: "3", m: "2" }));
++  assert.deepEqual([c.n, c.m], [3, 2]);
++});
++
++test("el producto o la categoría son obligatorios y el código tiene un formato", () => {
++  mal(form({ objetivoValor: "  " }), /código del ítem/);
++  mal(form({ objetivoTipo: "categoria", objetivoValor: "" }), /categoría/);
++  mal(form({ objetivoValor: "con espacios" }), /código solo lleva/);
++  mal(form({ tipo: "combo", disparadorValor: "", efecto: "gratis" }), /Si lleva/);
++  assert.deepEqual(ok(form({ objetivoTipo: "categoria", objetivoValor: " Cafés " })).objetivo, { categoria: "Cafés" });
++});
++
++test("nombre, descripción y prioridad", () => {
++  mal(form({ nombre: "  " }), /nombre/);
++  mal(form({ nombre: "x".repeat(81) }), /80/);
++  mal(form({ descripcion: "x".repeat(201) }), /200/);
++  mal(form({ prioridad: "-1" }), /prioridad/);
++  mal(form({ prioridad: "1.5" }), /prioridad/);
++  assert.equal(ok(form({ prioridad: "10", descripcion: "  Solo en barra " })).descripcion, "Solo en barra");
++});
++
++test("cuándo rige: fechas en orden, días únicos y ordenados, horario completo y distinto", () => {
++  const c = ok(form({ desde: "2026-11-01", hasta: "2026-11-15", dias: [5, 1, 5], horaDesde: "18:00", horaHasta: "21:00" }));
++  assert.deepEqual([c.vigencia, c.dias, c.horario], [{ desde: "2026-11-01", hasta: "2026-11-15" }, [1, 5], { desde: "18:00", hasta: "21:00" }]);
++  assert.deepEqual(ok(form({ desde: "2026-11-01" })).vigencia, { desde: "2026-11-01", hasta: null });
++  mal(form({ desde: "2026-11-15", hasta: "2026-11-01" }), /antes/);
++  mal(form({ horaDesde: "18:00" }), /dos horas/);
++  mal(form({ horaDesde: "18:00", horaHasta: "18:00" }), /iguales/);
++  assert.ok(ok(form({ horaDesde: "22:00", horaHasta: "02:00" })).horario);
++});
++
++test("editar: el formulario de una promoción guardada vuelve a dar el mismo cuerpo", () => {
++  const guardada = {
++    id: "1", nombre: "Combo", descripcion: "Con sándwich", activa: false, prioridad: 20, acumulable: true, tipo: "combo",
++    objetivo: { itemCodigo: null, categoria: "Cafés" }, disparador: { itemCodigo: "SAND", categoria: null }, n: null, m: null,
++    efecto: "porcentaje", valor: 12.5, vigencia: { desde: "2026-11-01", hasta: null }, dias: [4, 5], horario: { desde: "18:00", hasta: "21:00" },
++  };
++  const f = formularioDePromocion(guardada);
++  assert.deepEqual([f.objetivoTipo, f.objetivoValor, f.disparadorTipo, f.disparadorValor, f.valor, f.activa, f.prioridad], ["categoria", "Cafés", "item", "SAND", "12.5", false, "20"]);
++  assert.deepEqual(ok(f), {
++    nombre: "Combo", descripcion: "Con sándwich", tipo: "combo", prioridad: 20, acumulable: true, activa: false,
++    objetivo: { categoria: "Cafés" }, disparador: { itemCodigo: "SAND" }, efecto: "porcentaje", valor: 12.5,
++    vigencia: { desde: "2026-11-01", hasta: null }, dias: [4, 5], horario: { desde: "18:00", hasta: "21:00" },
++  });
++});
++
++test("textos: qué hace y cuándo rige", () => {
++  const base = { n: null, m: null, efecto: null, valor: null, vigencia: null, dias: null, horario: null, disparador: null };
++  assert.equal(textoQueHace({ ...base, tipo: "nxm", n: 2, m: 1, objetivo: { itemCodigo: "LATTE" } }), "Lleva 2, paga 1: «LATTE»");
++  assert.equal(textoQueHace({ ...base, tipo: "nxm", n: 3, m: 2, objetivo: { categoria: "Cafés" } }), "Lleva 3, paga 2: la categoría «Cafés»");
++  assert.equal(textoQueHace({ ...base, tipo: "combo", disparador: { itemCodigo: "SAND" }, objetivo: { itemCodigo: "CAFE" }, efecto: "porcentaje", valor: 50 }), "Si lleva «SAND», «CAFE» con 50 % de descuento");
++  assert.equal(textoQueHace({ ...base, tipo: "directo", objetivo: { itemCodigo: "TORTA" }, efecto: "porcentaje", valor: 12.5 }), "12,5 % de descuento en «TORTA»");
++  assert.equal(textoQueHace({ ...base, tipo: "directo", objetivo: { itemCodigo: "TORTA" }, efecto: "monto", valor: 3 }), "3,00 de descuento por unidad en «TORTA»");
++  assert.equal(textoQueHace({ ...base, tipo: "directo", objetivo: { categoria: "Postres" }, efecto: "gratis" }), "Gratis en la categoría «Postres»");
++
++  assert.equal(textoCuando(base), "Siempre");
++  assert.equal(textoCuando({ ...base, dias: [5, 0, 1] }), "Lun, Vie, Dom", "de lunes a domingo, no por número");
++  assert.equal(textoCuando({ ...base, dias: [0, 1, 2, 3, 4, 5, 6] }), "Todos los días");
++  assert.equal(textoCuando({ ...base, horario: { desde: "18:00", hasta: "21:00" } }), "18:00 a 21:00");
++  assert.equal(textoCuando({ ...base, dias: [4], horario: { desde: "18:00", hasta: "21:00" }, vigencia: { desde: "2026-11-01", hasta: "2026-11-15" } }), "Jue · 18:00 a 21:00 · del 1 nov 2026 al 15 nov 2026");
++  assert.equal(textoCuando({ ...base, vigencia: { desde: "2026-11-01", hasta: null } }), "desde el 1 nov 2026");
++  assert.equal(textoCuando({ ...base, vigencia: { desde: null, hasta: "2026-11-15" } }), "hasta el 15 nov 2026");
++  assert.equal(fechaCorta("2026-01-05"), "5 ene 2026");
++  assert.equal(DIAS_SEMANA.length, 7);
++});
++
++test("pedido de ejemplo: ignora filas vacías, numera las usadas y valida cada fila", () => {
++  const f = (o) => ({ ...lineaDePrueba(), ...o });
++  const r = parsearItemsPrueba([f({ codigo: "LATTE", categoria: "Cafés", cantidad: "2", precio: "10,5" }), f(), f({ codigo: "TORTA", precio: "18" })]);
++  assert.deepEqual(r, { ok: true, items: [{ id: "0", codigo: "LATTE", categoria: "Cafés", cantidad: 2, precio: 10.5 }, { id: "1", codigo: "TORTA", categoria: null, cantidad: 1, precio: 18 }] });
++  assert.match(parsearItemsPrueba([f(), f()]).error, /al menos un producto/);
++  assert.match(parsearItemsPrueba([f({ codigo: "A", precio: "1", cantidad: "0" })]).error, /Fila 1.*cantidad/);
++  assert.match(parsearItemsPrueba([f({ codigo: "A", precio: "1" }), f({ codigo: "B", precio: "x" })]).error, /Fila 2.*precio/);
++  assert.match(parsearItemsPrueba([f({ precio: "5" })]).error, /Fila 1.*código/);
++  assert.match(parsearItemsPrueba([f({ codigo: "A", precio: "1", cantidad: "100" })]).error, /1 a 99/);
++});
++
++test("fecha y hora de prueba: ISO si es válida, null si no", () => {
++  assert.equal(ahoraDeNavegador(""), null);
++  assert.equal(ahoraDeNavegador("ayer"), null);
++  assert.match(ahoraDeNavegador("2026-10-22T20:00"), /^2026-10-2[23]T\d\d:00:00\.000Z$/);
++});
++
++test("permisos: la pestaña pide promocion:leer y el servicio tobt; gestionar también necesita leer", () => {
++  assert.equal(SERVICIO_PROMOCIONES, "tobt");
++  const ids = (p, s) => seccionesVisibles(p, s).map((x) => x.id);
++  assert.ok(ids(["*"], ["tobt"]).includes("promociones"));
++  assert.ok(ids(["promocion:leer"], ["tobt"]).includes("promociones"));
++  assert.ok(ids(["promocion:*"], ["tobt"]).includes("promociones"));
++  assert.ok(!ids(["*"], ["siscore"]).includes("promociones"), "sin tobt no hay pestaña");
++  assert.ok(!ids(["promocion:gestionar"], ["tobt"]).includes("promociones"), "la lista pide promocion:leer en el servidor");
++  assert.ok(!ids(["catalogo:leer", "reporte:leer"], ["tobt"]).includes("promociones"));
++  assert.deepEqual([capacidades(["promocion:leer"]).promociones.gestionar, capacidades(["promocion:gestionar"]).promociones.gestionar], [false, false]);
++  assert.equal(capacidades(["promocion:leer", "promocion:gestionar"]).promociones.gestionar, true);
++  assert.equal(capacidades(["*"]).promociones.gestionar, true);
++  assert.deepEqual(ids(["*"], ["tobt"]), ["equipo", "catalogo", "fidelizacion", "promociones", "reportes", "empresa"]);
++});
++
++test("el destino de Inicio: pide promocion:leer y tobt", () => {
++  const d = DESTINOS.find((x) => x.id === "empresa.promociones");
++  assert.deepEqual([d.requiere, d.servicio, d.abre], ["promocion:leer", "tobt", { pantalla: "admin:promociones" }]);
++  const ve = (permisos, servicios) => destinosAccesibles({ permisos, servicios }).some((x) => x.id === "empresa.promociones");
++  assert.equal(ve(["*"], ["tobt"]), true);
++  assert.equal(ve(["*"], ["siscore"]), false);
++  assert.equal(ve(["fidelizacion:canjear"], ["tobt"]), false);
++});

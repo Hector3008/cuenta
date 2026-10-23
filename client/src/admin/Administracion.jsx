@@ -3,14 +3,15 @@ import { capacidades, empresaActiva, seccionesVisibles } from "./permisos.js";
 import Equipo from "./Equipo.jsx";
 import Catalogo from "./Catalogo.jsx";
 import Fidelizacion from "./Fidelizacion.jsx";
+import Promociones from "./Promociones.jsx";
 import Empresa from "./Empresa.jsx";
 import Reportes from "./Reportes.jsx";
 import "./admin.css";
 
-// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Reportes · Empresa.
+// Vista de administración de la empresa: Equipo · Catálogo · Fidelización · Promociones · Reportes · Empresa.
 // Props:
 //   yo               lo que devuelve `api.yo()` (ya normalizado)
-//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "reportes" | "empresa" (viene del destino que abrió la pantalla)
+//   seccionInicial   "equipo" | "catalogo" | "fidelizacion" | "promociones" | "reportes" | "empresa" (viene del destino que abrió la pantalla)
 //   alVolver         vuelve a Inicio
 // Sin enrutador (como el resto de `cuenta`): la pestaña vive en el estado. Solo se ofrecen las
 // secciones que la persona puede ver; los botones de CRUD salen de `capacidades`.
@@ -48,6 +49,7 @@ export default function Administracion({ yo, seccionInicial, alVolver }) {
         {actual === "equipo" && <Equipo cap={cap.equipo} yoId={yo?.usuario?.id} />}
         {actual === "catalogo" && <Catalogo cap={cap.catalogo} moneda={null} />}
         {actual === "fidelizacion" && <Fidelizacion cap={cap.fidelizacion} />}
+        {actual === "promociones" && <Promociones cap={cap.promociones} />}
         {actual === "reportes" && <Reportes />}
         {actual === "empresa" && <Empresa yo={yo} capRoles={cap.roles} capMarca={cap.marca} capDatos={cap.datos} />}
       </div>

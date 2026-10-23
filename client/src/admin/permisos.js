@@ -4,6 +4,7 @@
 // las comprobaciones de cada operación del núcleo.
 import { permite } from "../destinos.js";
 import { SERVICIO_REPORTES } from "./reportes-logica.js";
+import { SERVICIO_PROMOCIONES } from "./promociones-logica.js";
 
 export { permite };
 
@@ -33,6 +34,8 @@ export function capacidades(permisos) {
       // Agregar puntos a mano (5.39): hay que poder buscar al cliente (cliente:leer) y ajustar su libro (gestionar).
       ajustar: p("fidelizacion:gestionar") && p("cliente:leer"),
     },
+    // Promociones (5.41). La lista y la simulación piden promocion:leer en el servidor; quien gestiona también debe poder leer.
+    promociones: { ver: p("promocion:leer"), gestionar: p("promocion:gestionar") && p("promocion:leer") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
     datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
@@ -41,8 +44,8 @@ export function capacidades(permisos) {
 }
 
 // Pestañas que se ofrecen: solo las que la persona puede al menos ver. `servicios` (los códigos contratados por la
-// empresa activa, de /auth/yo) es opcional: si llega, Reportes solo se ofrece cuando la empresa tiene el servicio que
-// los calcula (sin él la ruta no existe). Mostrar u ocultar no es seguridad: manda `reporte:leer` en el servidor.
+// empresa activa, de /auth/yo) es opcional: si llega, Reportes (y Promociones) solo se ofrecen cuando la empresa tiene el servicio que
+// los calcula (o las aplica) (sin él la ruta no existe). Mostrar u ocultar no es seguridad: manda `reporte:leer` en el servidor.
 export function seccionesVisibles(permisos, servicios) {
   const c = capacidades(permisos);
   const tieneServicio = (codigo) => !Array.isArray(servicios) || servicios.includes(codigo);
@@ -50,6 +53,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "equipo", titulo: "Equipo", visible: c.equipo.ver },
     { id: "catalogo", titulo: "Catálogo", visible: c.catalogo.ver },
     { id: "fidelizacion", titulo: "Fidelización", visible: c.fidelizacion.ver },
+    { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
   ].filter((s) => s.visible);

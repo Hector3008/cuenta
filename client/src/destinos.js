@@ -60,6 +60,15 @@ export const DESTINOS = [
     abre: { pantalla: "admin:fidelizacion" },
   },
   {
+    id: "empresa.promociones",
+    titulo: "Promociones",
+    descripcion: "2x1, descuentos por combo y por horario.",
+    requiere: "promocion:leer",
+    servicio: "tobt",
+    disponible: true,
+    abre: { pantalla: "admin:promociones" },
+  },
+  {
     id: "empresa.reportes",
     titulo: "Reportes",
     descripcion: "Ventas en el tiempo, por categoría, mesero y cliente, platos y horas pico.",
