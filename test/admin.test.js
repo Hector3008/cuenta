@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DESTINOS, permite } from "../client/src/destinos.js";
 import { capacidades, seccionesVisibles, empresaActiva } from "../client/src/admin/permisos.js";
-import { parsearDatos, formularioDeDatos, lineasDeEncabezado, parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearAjustePuntos, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
+import { parsearDatos, formularioDeDatos, lineasDeEncabezado, parsearMarca, formularioDeMarca, normalizarColorEntrada, estiloDeVista, parsearReto, formularioDeReto, parsearAjustePuntos, parsearBeneficio, formularioDeBeneficio, parsearNiveles, textoNiveles, parsearPuntosPorUnidad, parsearReferidos, formularioDeReferidos, TIPOS_BENEFICIO, parsearPrecio, formatoPrecio, parsearDescripcion, parsearImagen, normalizarImagen, esEnlaceDeDrive, MAX_DESCRIPCION, MAX_IMAGEN } from "../client/src/admin/formato.js";
 
 // api.js calcula la ruta base con document.baseURI al importarse: se simula antes de cargar http.js.
 globalThis.document ??= { baseURI: "http://localhost/cuenta/" };
@@ -317,4 +317,18 @@ test("agregar puntos a mano exige fidelizacion:gestionar y poder buscar clientes
   assert.equal(capacidades(["fidelizacion:gestionar", "cliente:leer"]).fidelizacion.ajustar, true);
   assert.equal(capacidades(["fidelizacion:gestionar"]).fidelizacion.ajustar, false);
   assert.equal(capacidades(["fidelizacion:canjear", "cliente:leer"]).fidelizacion.ajustar, false);
+});
+
+test("referidos (5.46): el formulario es ida y vuelta y valida cada campo", () => {
+  const f = formularioDeReferidos({ habilitada: true, puntosReferente: 50, puntosReferido: 25, consumoMinimo: 0, maxPorCliente: 20, cuentaParaNiveles: true });
+  assert.deepEqual(f, { habilitada: true, puntosReferente: "50", puntosReferido: "25", consumoMinimo: "0", maxPorCliente: "20", cuentaParaNiveles: true });
+  assert.deepEqual(parsearReferidos(f), { ok: true, referidos: { habilitada: true, puntosReferente: 50, puntosReferido: 25, consumoMinimo: 0, maxPorCliente: 20, cuentaParaNiveles: true } });
+  assert.deepEqual(formularioDeReferidos(null).habilitada, false); // sin config: apagado y con los valores por defecto
+  assert.equal(formularioDeReferidos(null).maxPorCliente, "20");
+  assert.equal(parsearReferidos({ ...f, puntosReferente: "0", puntosReferido: "0" }).ok, true); // 0 = nada
+  assert.equal(parsearReferidos({ ...f, consumoMinimo: "" }).referidos.consumoMinimo, 0);
+  assert.equal(parsearReferidos({ ...f, consumoMinimo: "15,5" }).referidos.consumoMinimo, 15.5);
+  for (const malo of [{ puntosReferente: "-1" }, { puntosReferente: "1.5" }, { puntosReferido: "" }, { puntosReferido: "1000001" }, { maxPorCliente: "0" }, { maxPorCliente: "10001" }, { consumoMinimo: "-1" }, { consumoMinimo: "1,234" }, { consumoMinimo: "abc" }])
+    assert.equal(parsearReferidos({ ...f, ...malo }).ok, false, JSON.stringify(malo));
+  assert.equal(parsearReferidos({ ...f, cuentaParaNiveles: false }).referidos.cuentaParaNiveles, false);
 });

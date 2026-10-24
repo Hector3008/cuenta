@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, comoLista, mensajeAdmin } from "./http.js";
 import AjustarPuntos from "./AjustarPuntos.jsx";
+import ListaReferidos from "./ListaReferidos.jsx";
 import { Aviso, BotonConfirmar, Campo } from "./piezas.jsx";
-import { TIPOS_BENEFICIO, formularioDeBeneficio, formularioDeReto, parsearBeneficio, parsearNiveles, parsearPuntosPorUnidad, parsearReto, textoNiveles } from "./formato.js";
+import { TIPOS_BENEFICIO, formularioDeBeneficio, formularioDeReto, parsearBeneficio, parsearNiveles, parsearPuntosPorUnidad, parsearReferidos, formularioDeReferidos, parsearReto, textoNiveles } from "./formato.js";
 
 // Sección Fidelización (5.30): las reglas de los puntos y los niveles de la empresa, y los beneficios que el
 // cliente puede canjear por un vale. Retos (5.31): «prueba toda una categoría de la carta y gana un vale». Ver pide fidelizacion:canjear o gestionar; cambiar, fidelizacion:gestionar.
@@ -44,6 +45,7 @@ export default function Fidelizacion({ cap }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [reglas, setReglas] = useState({ habilitada: true, puntosPorUnidad: "1", niveles: "" });
+  const [refForm, setRefForm] = useState(formularioDeReferidos(null));
   const [formulario, setFormulario] = useState(null); // { id?, datos }
   const [retos, setRetos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -63,6 +65,7 @@ export default function Fidelizacion({ cap }) {
       setRetos(comoLista(r?.retos ?? r).map(normalizarReto));
       setCategorias(comoLista(cats).map((x) => (typeof x === "string" ? x : x?.categoria ?? x?.nombre ?? "")).filter(Boolean));
       setReglas({ habilitada: c.habilitada !== false, puntosPorUnidad: String(c.puntosPorUnidad ?? 1), niveles: textoNiveles(c.niveles) });
+      setRefForm(formularioDeReferidos(c.referidos));
       setBeneficios(comoLista(b).map(normalizarBeneficio));
       setError("");
     } catch (err) {
@@ -88,6 +91,24 @@ export default function Fidelizacion({ cap }) {
     try {
       await api.put("clientes/fidelizacion/config", { habilitada: reglas.habilitada, puntosPorUnidad: p.valor, niveles: n.niveles });
       setOk("Reglas guardadas.");
+      await cargar();
+    } catch (err) {
+      setError(mensajeAdmin(err));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function guardarReferidos(ev) {
+    ev.preventDefault();
+    const r = parsearReferidos(refForm);
+    if (!r.ok) return setError(r.error);
+    setEnviando(true);
+    setError("");
+    setOk("");
+    try {
+      await api.put("clientes/fidelizacion/config", { referidos: r.referidos });
+      setOk("Reglas de referidos guardadas.");
       await cargar();
     } catch (err) {
       setError(mensajeAdmin(err));
@@ -206,6 +227,36 @@ export default function Fidelizacion({ cap }) {
               </div>
             )}
           </form>
+
+          <form className="adm-form" onSubmit={guardarReferidos}>
+            <h3>Referidos: trae a un amigo</h3>
+            <label className="adm-check">
+              <input type="checkbox" disabled={!cap.gestionar} checked={refForm.habilitada} onChange={(e) => setRefForm({ ...refForm, habilitada: e.target.checked })} />
+              El programa de referidos está activo
+            </label>
+            <Campo etiqueta="Puntos para quien refiere" ayuda="Se dan cuando el amigo paga su primer consumo. 0 = nada.">
+              <input inputMode="numeric" disabled={!cap.gestionar} value={refForm.puntosReferente} onChange={(e) => setRefForm({ ...refForm, puntosReferente: e.target.value })} />
+            </Campo>
+            <Campo etiqueta="Puntos para el amigo" ayuda="Los recibe en ese mismo primer consumo. 0 = nada.">
+              <input inputMode="numeric" disabled={!cap.gestionar} value={refForm.puntosReferido} onChange={(e) => setRefForm({ ...refForm, puntosReferido: e.target.value })} />
+            </Campo>
+            <Campo etiqueta="Consumo mínimo del amigo" ayuda="Monto que debe llegar a pagar el amigo para que el premio se dé. 0 = ninguno; si paga menos, espera a su siguiente pago.">
+              <input inputMode="decimal" disabled={!cap.gestionar} value={refForm.consumoMinimo} onChange={(e) => setRefForm({ ...refForm, consumoMinimo: e.target.value })} />
+            </Campo>
+            <Campo etiqueta="Máximo de amigos premiados por cliente" ayuda="Pasado el tope, los nuevos referidos ya no dan premio a nadie.">
+              <input inputMode="numeric" disabled={!cap.gestionar} value={refForm.maxPorCliente} onChange={(e) => setRefForm({ ...refForm, maxPorCliente: e.target.value })} />
+            </Campo>
+            <label className="adm-check">
+              <input type="checkbox" disabled={!cap.gestionar} checked={refForm.cuentaParaNiveles} onChange={(e) => setRefForm({ ...refForm, cuentaParaNiveles: e.target.checked })} />
+              Los puntos de referidos cuentan para niveles e insignias de puntos
+            </label>
+            {cap.gestionar && (
+              <div className="adm-acciones">
+                <button type="submit" className="adm-btn adm-btn--primario" disabled={enviando}>{enviando ? "Guardando…" : "Guardar referidos"}</button>
+              </div>
+            )}
+          </form>
+          {cap.gestionar && <ListaReferidos />}
 
           {cap.ajustar && <AjustarPuntos />}
 

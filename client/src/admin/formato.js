@@ -150,6 +150,43 @@ export function parsearPuntosPorUnidad(texto) {
   return { ok: true, valor: n };
 }
 
+// ---------- referidos (5.46): reglas del premio por traer amigos ----------
+
+/** La config de referidos del servidor → el texto del formulario. */
+export function formularioDeReferidos(r) {
+  return {
+    habilitada: r?.habilitada === true,
+    puntosReferente: String(r?.puntosReferente ?? 50),
+    puntosReferido: String(r?.puntosReferido ?? 25),
+    consumoMinimo: String(r?.consumoMinimo ?? 0),
+    maxPorCliente: String(r?.maxPorCliente ?? 20),
+    cuentaParaNiveles: r?.cuentaParaNiveles !== false,
+  };
+}
+
+/** El formulario de referidos → { habilitada, puntosReferente, … } listo para enviar, o { ok: false, error }. */
+export function parsearReferidos(f) {
+  const entero = (t, min, max) => {
+    const s = String(t ?? "").trim();
+    if (!/^\d+$/.test(s)) return null;
+    const n = Number(s);
+    return n >= min && n <= max ? n : null;
+  };
+  const puntosReferente = entero(f?.puntosReferente, 0, 1_000_000);
+  if (puntosReferente === null) return { ok: false, error: "Los puntos para quien refiere: un entero de 0 a 1.000.000 (0 = nada)." };
+  const puntosReferido = entero(f?.puntosReferido, 0, 1_000_000);
+  if (puntosReferido === null) return { ok: false, error: "Los puntos para el amigo: un entero de 0 a 1.000.000 (0 = nada)." };
+  const maxPorCliente = entero(f?.maxPorCliente, 1, 10_000);
+  if (maxPorCliente === null) return { ok: false, error: "El tope de amigos por cliente: un entero de 1 a 10.000." };
+  const texto = String(f?.consumoMinimo ?? "").trim();
+  const consumoMinimo = texto === "" ? 0 : aNumero(texto);
+  if (!Number.isFinite(consumoMinimo) || consumoMinimo < 0 || consumoMinimo > 1_000_000 || Math.abs(Math.round(consumoMinimo * 100) / 100 - consumoMinimo) > 1e-9)
+    return { ok: false, error: "El consumo mínimo: un monto de 0 a 1.000.000 con hasta 2 decimales (0 = ninguno)." };
+  return { ok: true, referidos: { habilitada: f?.habilitada === true, puntosReferente, puntosReferido, consumoMinimo, maxPorCliente, cuentaParaNiveles: f?.cuentaParaNiveles !== false } };
+}
+
+export const ESTADOS_REFERIDO = { pendiente: "Pendiente", premiado: "Premiado", sin_cupo: "Sin cupo" };
+
 // ---------- puntos de un cliente: agregar a mano (5.39) ----------
 
 export const MAX_PUNTOS_AJUSTE = 1_000_000;

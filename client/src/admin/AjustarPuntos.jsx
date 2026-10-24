@@ -7,7 +7,7 @@ import { MAX_MOTIVO_AJUSTE, parsearAjustePuntos } from "./formato.js";
 // `ajuste`: suma al saldo pero NO cuenta como consumo (no sube el nivel, no da insignias ni avanza retos).
 // Pide fidelizacion:gestionar y cliente:leer (la sección solo se ofrece con ambos; la seguridad real está en el servidor).
 
-const TIPOS = { acumulo: "Consumo", canje: "Canje", ajuste: "Ajuste", vencimiento: "Vencimiento" };
+const TIPOS = { acumulo: "Consumo", canje: "Canje", ajuste: "Ajuste", vencimiento: "Vencimiento", bono: "Bono" };
 const fecha = (ts) => {
   const d = new Date(ts);
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" });
