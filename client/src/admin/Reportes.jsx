@@ -6,7 +6,7 @@ import {
   consultaDe, rotuloCubeta, rotuloLargo, dinero, entero, compacto, porcentaje,
   geometriaLinea, rutaLinea, rutaArea, indiceMasCercano, pasoDeRotulos,
   largosDeBarra, nivelDeCalor, celdaPico, textoPico, rotuloHora, rotuloCelda, matrizDeHoras,
-  asignarColores, variableDeColor, filasDeTabla, hayVentas,
+  asignarColores, variableDeColor, filasDeTabla, hayVentas, hayPromociones, barrasDePromociones,
 } from "./reportes-logica.js";
 import "./reportes.css";
 
@@ -346,7 +346,7 @@ export default function Reportes() {
         <div className={cargando ? "rep-contenido rep-contenido--recarga" : "rep-contenido"} aria-busy={cargando}>
           <p className="adm-nota">
             {rotuloLargo({ inicio: datos.desde }, "dia")} – {rotuloLargo({ inicio: datos.hasta }, "dia")} · {entero(datos.dias)} {datos.dias === 1 ? "día" : "días"} · horario de {datos.zona}.
-            Ventas = lo cobrado (sin anulados ni pedidos abiertos), sin propinas.
+            Ventas = lo cobrado (sin anulados ni pedidos abiertos), con las promociones y los vales ya descontados y sin propinas.
           </p>
 
           <div className="rep-fichas">
@@ -362,6 +362,13 @@ export default function Reportes() {
               <span className="rep-ficha-etiqueta">Ticket promedio</span>
               <strong className="rep-ficha-valor">{datos.resumen.ticketPromedio === null ? "—" : dinero(datos.resumen.ticketPromedio, moneda)}</strong>
             </div>
+            {hayPromociones(datos) && (
+              <div className="rep-ficha">
+                <span className="rep-ficha-etiqueta">Descontado por promociones</span>
+                <strong className="rep-ficha-valor">{dinero(datos.promociones.ahorro, moneda)}</strong>
+                <small className="adm-nota">{porcentaje(datos.promociones.porcentaje)} de lo que habrían sido las ventas ({dinero(datos.promociones.ventasAntes, moneda)})</small>
+              </div>
+            )}
           </div>
 
           <div className="rep-rejilla-tarjetas">
@@ -413,6 +420,18 @@ export default function Reportes() {
               <Barras
                 filas={datos.platos} campo="cantidad" etiqueta={(p) => p.nombre} valor={(p) => `${entero(p.cantidad)} u.`}
                 detalle={(p) => [[`${entero(p.cantidad)} u.`, "vendidas"], [dinero(p.ventas, moneda), "ventas"], ...(p.categoria ? [[p.categoria, "categoría"]] : [])]}
+              />
+            </Tarjeta>
+
+            <Tarjeta
+              id="promociones" titulo="Promociones" subtitulo="Cuánto se descontó con cada una"
+              vacia={con ? (hayPromociones(datos) ? null : "No se aplicó ninguna promoción en este rango.") : sinVentas}
+              tabla={{ cabeceras: ["Promoción", "Descontado", "Ítems", "Del descuento"], filas: tablas.promociones }}
+              nota="Las ventas de arriba ya tienen estos descuentos restados. «Ítems» cuenta los ítems cobrados a los que se les aplicó."
+            >
+              <Barras
+                filas={barrasDePromociones(datos.promociones)} campo="ahorro" etiqueta={(x) => x.nombre} valor={(x) => dinero(x.ahorro, moneda)} apagada={(x) => x.tipo === "otras"}
+                detalle={(x) => [[dinero(x.ahorro, moneda), "descontado"], [entero(x.items), x.items === 1 ? "ítem" : "ítems"], [porcentaje(x.porcentaje), "del descuento total"]]}
               />
             </Tarjeta>
 

@@ -1,0 +1,133 @@
+diff --git a/client/src/admin/Reportes.jsx b/client/src/admin/Reportes.jsx
+index cdf8431..d95fe35 100644
+--- a/client/src/admin/Reportes.jsx
++++ b/client/src/admin/Reportes.jsx
+@@ -6,7 +6,7 @@ import {
+   consultaDe, rotuloCubeta, rotuloLargo, dinero, entero, compacto, porcentaje,
+   geometriaLinea, rutaLinea, rutaArea, indiceMasCercano, pasoDeRotulos,
+   largosDeBarra, nivelDeCalor, celdaPico, textoPico, rotuloHora, rotuloCelda, matrizDeHoras,
+-  asignarColores, variableDeColor, filasDeTabla, hayVentas,
++  asignarColores, variableDeColor, filasDeTabla, hayVentas, hayPromociones, barrasDePromociones,
+ } from "./reportes-logica.js";
+ import "./reportes.css";
+ 
+@@ -346,7 +346,7 @@ export default function Reportes() {
+         <div className={cargando ? "rep-contenido rep-contenido--recarga" : "rep-contenido"} aria-busy={cargando}>
+           <p className="adm-nota">
+             {rotuloLargo({ inicio: datos.desde }, "dia")} – {rotuloLargo({ inicio: datos.hasta }, "dia")} · {entero(datos.dias)} {datos.dias === 1 ? "día" : "días"} · horario de {datos.zona}.
+-            Ventas = lo cobrado (sin anulados ni pedidos abiertos), sin propinas.
++            Ventas = lo cobrado (sin anulados ni pedidos abiertos), con las promociones y los vales ya descontados y sin propinas.
+           </p>
+ 
+           <div className="rep-fichas">
+@@ -362,6 +362,13 @@ export default function Reportes() {
+               <span className="rep-ficha-etiqueta">Ticket promedio</span>
+               <strong className="rep-ficha-valor">{datos.resumen.ticketPromedio === null ? "—" : dinero(datos.resumen.ticketPromedio, moneda)}</strong>
+             </div>
++            {hayPromociones(datos) && (
++              <div className="rep-ficha">
++                <span className="rep-ficha-etiqueta">Descontado por promociones</span>
++                <strong className="rep-ficha-valor">{dinero(datos.promociones.ahorro, moneda)}</strong>
++                <small className="adm-nota">{porcentaje(datos.promociones.porcentaje)} de lo que habrían sido las ventas ({dinero(datos.promociones.ventasAntes, moneda)})</small>
++              </div>
++            )}
+           </div>
+ 
+           <div className="rep-rejilla-tarjetas">
+@@ -416,6 +423,18 @@ export default function Reportes() {
+               />
+             </Tarjeta>
+ 
++            <Tarjeta
++              id="promociones" titulo="Promociones" subtitulo="Cuánto se descontó con cada una"
++              vacia={con ? (hayPromociones(datos) ? null : "No se aplicó ninguna promoción en este rango.") : sinVentas}
++              tabla={{ cabeceras: ["Promoción", "Descontado", "Ítems", "Del descuento"], filas: tablas.promociones }}
++              nota="Las ventas de arriba ya tienen estos descuentos restados. «Ítems» cuenta los ítems cobrados a los que se les aplicó."
++            >
++              <Barras
++                filas={barrasDePromociones(datos.promociones)} campo="ahorro" etiqueta={(x) => x.nombre} valor={(x) => dinero(x.ahorro, moneda)} apagada={(x) => x.tipo === "otras"}
++                detalle={(x) => [[dinero(x.ahorro, moneda), "descontado"], [entero(x.items), x.items === 1 ? "ítem" : "ítems"], [porcentaje(x.porcentaje), "del descuento total"]]}
++              />
++            </Tarjeta>
++
+             <Tarjeta
+               id="horas" ancha titulo="Horas pico" subtitulo={pico ? `Lo más fuerte: ${textoPico(pico, moneda)}` : "Ventas por día de la semana y hora"}
+               vacia={con ? null : sinVentas} tabla={{ cabeceras: ["Día y hora", "Ventas", "Ítems"], filas: tablas.horas }}
+diff --git a/client/src/admin/reportes-logica.js b/client/src/admin/reportes-logica.js
+index ba20fa5..80c6513 100644
+--- a/client/src/admin/reportes-logica.js
++++ b/client/src/admin/reportes-logica.js
+@@ -206,6 +206,27 @@ export const variableDeColor = (indice) => (indice >= 0 && indice < COLORES_CATE
+ 
+ // ---------- tablas (la vista alternativa de cada gráfico) ----------
+ 
++/** Promociones (5.43): una fila por promoción, más «Otras promociones» si el servidor juntó el resto. Tolera un servidor sin el campo. */
++export function filasDePromociones(promociones, moneda) {
++  const p = promociones ?? { porPromocion: [], otras: null };
++  return [
++    ...(p.porPromocion ?? []).map((x) => [x.nombre, dinero(x.ahorro, moneda), entero(x.items), porcentaje(x.porcentaje)]),
++    ...(p.otras ? [[`Otras promociones (${entero(p.otras.cantidad)})`, dinero(p.otras.ahorro, moneda), entero(p.otras.items), porcentaje(p.otras.ahorro > 0 && promociones.ahorro > 0 ? Math.round((p.otras.ahorro / promociones.ahorro) * 1000) / 10 : 0)]] : []),
++  ];
++}
++
++/** Las barras de promociones: por ahorro, con «Otras promociones» al final y apagada. */
++export function barrasDePromociones(promociones) {
++  const p = promociones ?? { porPromocion: [], otras: null, ahorro: 0 };
++  return [
++    ...(p.porPromocion ?? []).map((x) => ({ ...x, tipo: "promocion" })),
++    ...(p.otras ? [{ id: "otras", nombre: `Otras promociones (${p.otras.cantidad})`, ahorro: p.otras.ahorro, items: p.otras.items, porcentaje: p.ahorro > 0 ? Math.round((p.otras.ahorro / p.ahorro) * 1000) / 10 : 0, tipo: "otras" }] : []),
++  ];
++}
++
++/** ¿Se descontó algo por promociones en el rango? */
++export const hayPromociones = (datos) => (datos?.promociones?.ahorro ?? 0) > 0;
++
+ export function filasDeTabla(datos, gran) {
+   const { moneda } = datos;
+   return {
+@@ -218,6 +239,7 @@ export function filasDeTabla(datos, gran) {
+       ...(datos.clientes.sinCliente.ventas > 0 ? [["Sin cliente", dinero(datos.clientes.sinCliente.ventas, moneda), porcentaje(datos.clientes.sinCliente.porcentaje)]] : []),
+     ],
+     platos: datos.platos.map((p) => [p.nombre, entero(p.cantidad), dinero(p.ventas, moneda)]),
++    promociones: filasDePromociones(datos.promociones, moneda),
+     horas: datos.horas.filter((c) => c.ventas > 0).map((c) => [rotuloCelda(c), dinero(c.ventas, moneda), entero(c.items)]),
+   };
+ }
+diff --git a/test/reportes.test.js b/test/reportes.test.js
+index c4be6ca..100103b 100644
+--- a/test/reportes.test.js
++++ b/test/reportes.test.js
+@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
+ import {
+   consultaDe, ticksBonitos, geometriaLinea, rutaLinea, rutaArea, indiceMasCercano, pasoDeRotulos, largosDeBarra,
+   nivelDeCalor, celdaPico, textoPico, matrizDeHoras, asignarColores, variableDeColor, compacto, rotuloCubeta, rotuloLargo,
+-  porcentaje, filasDeTabla, hayVentas, NIVELES_CALOR, COLORES_CATEGORIA, MAX_DIAS,
++  porcentaje, filasDeTabla, hayVentas, filasDePromociones, barrasDePromociones, hayPromociones, NIVELES_CALOR, COLORES_CATEGORIA, MAX_DIAS,
+ } from "../client/src/admin/reportes-logica.js";
+ 
+ test("consultaDe: un atajo pide `dias` (hoy lo decide el servidor); un rango propio pide desde y hasta", () => {
+@@ -192,3 +192,24 @@ test("hayVentas", () => {
+   assert.equal(hayVentas(null), false);
+   assert.equal(hayVentas({}), false);
+ });
++
++test("promociones (5.43): filas de tabla, barras y «hay promociones»; un servidor sin el campo no rompe nada", () => {
++  const promociones = {
++    ahorro: 20, ventasAntes: 46, porcentaje: 43.5, items: 6,
++    porPromocion: [{ id: "a", nombre: "2×1 en lattes", ahorro: 12.5, items: 3, porcentaje: 62.5 }, { id: "b", nombre: "Torta 10 %", ahorro: 5, items: 2, porcentaje: 25 }],
++    otras: { cantidad: 2, ahorro: 2.5, items: 1 },
++  };
++  const f = filasDePromociones(promociones, "PEN");
++  assert.deepEqual(f.map((x) => x[0]), ["2×1 en lattes", "Torta 10 %", "Otras promociones (2)"]);
++  assert.equal(f[0][2], "3");
++  assert.equal(f[2][3], "12,5 %");
++  const b = barrasDePromociones(promociones);
++  assert.deepEqual(b.map((x) => [x.tipo, x.ahorro]), [["promocion", 12.5], ["promocion", 5], ["otras", 2.5]]);
++  assert.equal(b[2].porcentaje, 12.5);
++  assert.equal(hayPromociones({ promociones }), true);
++  for (const sin of [undefined, null, {}, { promociones: { ahorro: 0 } }]) assert.equal(hayPromociones(sin), false);
++  assert.deepEqual(filasDePromociones(undefined, "PEN"), []);
++  assert.deepEqual(barrasDePromociones(undefined), []);
++  assert.deepEqual(filasDeTabla(datos, "dia").promociones, []); // datos de un servidor anterior a 5.43
++  assert.equal(filasDeTabla({ ...datos, promociones }, "dia").promociones.length, 3);
++});

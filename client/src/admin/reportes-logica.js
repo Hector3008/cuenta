@@ -206,6 +206,27 @@ export const variableDeColor = (indice) => (indice >= 0 && indice < COLORES_CATE
 
 // ---------- tablas (la vista alternativa de cada gráfico) ----------
 
+/** Promociones (5.43): una fila por promoción, más «Otras promociones» si el servidor juntó el resto. Tolera un servidor sin el campo. */
+export function filasDePromociones(promociones, moneda) {
+  const p = promociones ?? { porPromocion: [], otras: null };
+  return [
+    ...(p.porPromocion ?? []).map((x) => [x.nombre, dinero(x.ahorro, moneda), entero(x.items), porcentaje(x.porcentaje)]),
+    ...(p.otras ? [[`Otras promociones (${entero(p.otras.cantidad)})`, dinero(p.otras.ahorro, moneda), entero(p.otras.items), porcentaje(p.otras.ahorro > 0 && promociones.ahorro > 0 ? Math.round((p.otras.ahorro / promociones.ahorro) * 1000) / 10 : 0)]] : []),
+  ];
+}
+
+/** Las barras de promociones: por ahorro, con «Otras promociones» al final y apagada. */
+export function barrasDePromociones(promociones) {
+  const p = promociones ?? { porPromocion: [], otras: null, ahorro: 0 };
+  return [
+    ...(p.porPromocion ?? []).map((x) => ({ ...x, tipo: "promocion" })),
+    ...(p.otras ? [{ id: "otras", nombre: `Otras promociones (${p.otras.cantidad})`, ahorro: p.otras.ahorro, items: p.otras.items, porcentaje: p.ahorro > 0 ? Math.round((p.otras.ahorro / p.ahorro) * 1000) / 10 : 0, tipo: "otras" }] : []),
+  ];
+}
+
+/** ¿Se descontó algo por promociones en el rango? */
+export const hayPromociones = (datos) => (datos?.promociones?.ahorro ?? 0) > 0;
+
 export function filasDeTabla(datos, gran) {
   const { moneda } = datos;
   return {
@@ -218,6 +239,7 @@ export function filasDeTabla(datos, gran) {
       ...(datos.clientes.sinCliente.ventas > 0 ? [["Sin cliente", dinero(datos.clientes.sinCliente.ventas, moneda), porcentaje(datos.clientes.sinCliente.porcentaje)]] : []),
     ],
     platos: datos.platos.map((p) => [p.nombre, entero(p.cantidad), dinero(p.ventas, moneda)]),
+    promociones: filasDePromociones(datos.promociones, moneda),
     horas: datos.horas.filter((c) => c.ventas > 0).map((c) => [rotuloCelda(c), dinero(c.ventas, moneda), entero(c.items)]),
   };
 }

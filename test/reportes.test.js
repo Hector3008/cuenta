@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   consultaDe, ticksBonitos, geometriaLinea, rutaLinea, rutaArea, indiceMasCercano, pasoDeRotulos, largosDeBarra,
   nivelDeCalor, celdaPico, textoPico, matrizDeHoras, asignarColores, variableDeColor, compacto, rotuloCubeta, rotuloLargo,
-  porcentaje, filasDeTabla, hayVentas, NIVELES_CALOR, COLORES_CATEGORIA, MAX_DIAS,
+  porcentaje, filasDeTabla, hayVentas, filasDePromociones, barrasDePromociones, hayPromociones, NIVELES_CALOR, COLORES_CATEGORIA, MAX_DIAS,
 } from "../client/src/admin/reportes-logica.js";
 
 test("consultaDe: un atajo pide `dias` (hoy lo decide el servidor); un rango propio pide desde y hasta", () => {
@@ -191,4 +191,25 @@ test("hayVentas", () => {
   assert.equal(hayVentas({ resumen: { items: 0 } }), false);
   assert.equal(hayVentas(null), false);
   assert.equal(hayVentas({}), false);
+});
+
+test("promociones (5.43): filas de tabla, barras y «hay promociones»; un servidor sin el campo no rompe nada", () => {
+  const promociones = {
+    ahorro: 20, ventasAntes: 46, porcentaje: 43.5, items: 6,
+    porPromocion: [{ id: "a", nombre: "2×1 en lattes", ahorro: 12.5, items: 3, porcentaje: 62.5 }, { id: "b", nombre: "Torta 10 %", ahorro: 5, items: 2, porcentaje: 25 }],
+    otras: { cantidad: 2, ahorro: 2.5, items: 1 },
+  };
+  const f = filasDePromociones(promociones, "PEN");
+  assert.deepEqual(f.map((x) => x[0]), ["2×1 en lattes", "Torta 10 %", "Otras promociones (2)"]);
+  assert.equal(f[0][2], "3");
+  assert.equal(f[2][3], "12,5 %");
+  const b = barrasDePromociones(promociones);
+  assert.deepEqual(b.map((x) => [x.tipo, x.ahorro]), [["promocion", 12.5], ["promocion", 5], ["otras", 2.5]]);
+  assert.equal(b[2].porcentaje, 12.5);
+  assert.equal(hayPromociones({ promociones }), true);
+  for (const sin of [undefined, null, {}, { promociones: { ahorro: 0 } }]) assert.equal(hayPromociones(sin), false);
+  assert.deepEqual(filasDePromociones(undefined, "PEN"), []);
+  assert.deepEqual(barrasDePromociones(undefined), []);
+  assert.deepEqual(filasDeTabla(datos, "dia").promociones, []); // datos de un servidor anterior a 5.43
+  assert.equal(filasDeTabla({ ...datos, promociones }, "dia").promociones.length, 3);
 });
