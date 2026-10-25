@@ -61,7 +61,7 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => 
 
 test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
@@ -69,7 +69,7 @@ test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
 });

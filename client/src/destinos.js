@@ -69,6 +69,15 @@ export const DESTINOS = [
     abre: { pantalla: "admin:promociones" },
   },
   {
+    id: "empresa.anuncios",
+    titulo: "Anuncios",
+    descripcion: "Eventos y publicidad que salen en la carta.",
+    requiere: "anuncio:leer",
+    servicio: "tobt",
+    disponible: true,
+    abre: { pantalla: "admin:anuncios" },
+  },
+  {
     id: "empresa.reportes",
     titulo: "Reportes",
     descripcion: "Ventas en el tiempo, por categoría, mesero y cliente, platos y horas pico.",

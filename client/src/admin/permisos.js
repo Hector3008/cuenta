@@ -5,6 +5,7 @@
 import { permite } from "../destinos.js";
 import { SERVICIO_REPORTES } from "./reportes-logica.js";
 import { SERVICIO_PROMOCIONES } from "./promociones-logica.js";
+import { SERVICIO_ANUNCIOS } from "./anuncios-logica.js";
 
 export { permite };
 
@@ -36,6 +37,8 @@ export function capacidades(permisos) {
     },
     // Promociones (5.41). La lista y la simulación piden promocion:leer en el servidor; quien gestiona también debe poder leer.
     promociones: { ver: p("promocion:leer"), gestionar: p("promocion:gestionar") && p("promocion:leer") },
+    // Anuncios (5.49): eventos y publicidad de la carta pública. La lista pide anuncio:leer en el servidor.
+    anuncios: { ver: p("anuncio:leer"), gestionar: p("anuncio:gestionar") && p("anuncio:leer") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
     datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
@@ -54,6 +57,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "catalogo", titulo: "Catálogo", visible: c.catalogo.ver },
     { id: "fidelizacion", titulo: "Fidelización", visible: c.fidelizacion.ver },
     { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
+    { id: "anuncios", titulo: "Anuncios", visible: c.anuncios.ver && tieneServicio(SERVICIO_ANUNCIOS) },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
   ].filter((s) => s.visible);
