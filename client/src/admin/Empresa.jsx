@@ -5,6 +5,8 @@ import { normalizarRol } from "./Equipo.jsx";
 import { empresaActiva } from "./permisos.js";
 import Marca from "./Marca.jsx";
 import DatosEmpresa from "./DatosEmpresa.jsx";
+import GuiaPermisos from "./GuiaPermisos.jsx";
+import { agregarPermiso, ayudaDe, quitarPermiso } from "./permisos-guia.js";
 
 // Sección Empresa: datos básicos (solo lectura: aún no hay ruta para editar la
 // empresa, 5.20/5.10) y roles de la empresa con CRUD si hay `rol:gestionar` (5.14).
@@ -27,6 +29,7 @@ export default function Empresa({ yo, capRoles, capMarca = {}, capDatos = {} }) 
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [formulario, setFormulario] = useState(null);
+  const [verGuia, setVerGuia] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!capRoles.ver) return;
@@ -101,9 +104,12 @@ export default function Empresa({ yo, capRoles, capMarca = {}, capDatos = {} }) 
         <>
           <header className="adm-cabecera">
             <h3>Roles</h3>
-            {capRoles.gestionar && (
-              <button type="button" className="adm-btn adm-btn--primario" onClick={() => setFormulario({ modo: "crear", datos: VACIO })}>Nuevo rol</button>
-            )}
+            <div className="adm-acciones">
+              <button type="button" className="adm-btn" aria-expanded={verGuia} onClick={() => setVerGuia((v) => !v)}>{verGuia ? "Ocultar guía de permisos" : "Guía de permisos"}</button>
+              {capRoles.gestionar && (
+                <button type="button" className="adm-btn adm-btn--primario" onClick={() => setFormulario({ modo: "crear", datos: VACIO })}>Nuevo rol</button>
+              )}
+            </div>
           </header>
           <Aviso onCerrar={() => setError("")}>{error}</Aviso>
           <Aviso tipo="ok" onCerrar={() => setOk("")}>{ok}</Aviso>
@@ -124,6 +130,15 @@ export default function Empresa({ yo, capRoles, capMarca = {}, capDatos = {} }) 
             </form>
           )}
 
+          {verGuia && (
+            <GuiaPermisos
+              misPermisos={yo?.permisos ?? []}
+              texto={formulario ? formulario.datos.permisos : null}
+              onAgregar={(id) => setFormulario((f) => f && ({ ...f, datos: { ...f.datos, permisos: agregarPermiso(f.datos.permisos, id) } }))}
+              onQuitar={(id) => setFormulario((f) => f && ({ ...f, datos: { ...f.datos, permisos: quitarPermiso(f.datos.permisos, id) } }))}
+            />
+          )}
+
           {cargando ? (
             <p className="adm-vacio">Cargando…</p>
           ) : (
@@ -134,7 +149,7 @@ export default function Empresa({ yo, capRoles, capMarca = {}, capDatos = {} }) 
                   {roles.map((r) => (
                     <tr key={r.id}>
                       <td>{r.nombre}</td>
-                      <td className="adm-permisos">{r.permisos.map((p) => (<code key={p}>{p}</code>))}</td>
+                      <td className="adm-permisos">{r.permisos.map((p) => (<code key={p} title={ayudaDe(p)}>{p}</code>))}</td>
                       {capRoles.gestionar && (
                         <td className="adm-celda-acciones">
                           {!esAdminRol(r) && (
