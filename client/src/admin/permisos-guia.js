@@ -51,6 +51,7 @@ export const GUIA = [
       { id: "catalogo:crear", titulo: "Agregar ítems", descripcion: "Dar de alta ítems nuevos en el catálogo." },
       { id: "catalogo:editar", titulo: "Editar ítems", descripcion: "Cambiar el nombre, el precio, la descripción y la foto de un ítem." },
       { id: "catalogo:gestionar", titulo: "Dar de baja e importar", descripcion: "Desactivar y reactivar ítems, e importar el catálogo de forma masiva." },
+      { id: "catalogo:disponibilidad", titulo: "Marcar platos agotados", descripcion: "Marcar qué platos hoy no hay y quitar la marca cuando vuelven. Es lo que necesita cocina: no da acceso a precios ni a editar el catálogo.", servicio: "tobt" },
     ],
   },
   {
@@ -172,7 +173,7 @@ export const COMODINES = [
 /** Roles de ejemplo que se crean con la empresa (la copia que viene con el servicio tobt). */
 export const ROLES_DE_EJEMPLO = [
   { nombre: "mesero", permisos: ["estacion:creacion", "estacion:carta", "documento:crear", "documento:leer", "documento:editar", "catalogo:leer", "cliente:leer", "cliente:crear", "cliente:cuenta", "fidelizacion:canjear"] },
-  { nombre: "cocina", permisos: ["estacion:cocina", "documento:leer", "documento:editar"] },
+  { nombre: "cocina", permisos: ["estacion:cocina", "documento:leer", "documento:editar", "catalogo:disponibilidad"] },
   { nombre: "delivery", permisos: ["estacion:delivery", "documento:leer", "documento:editar", "cliente:leer"] },
 ];
 

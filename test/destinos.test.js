@@ -10,7 +10,7 @@ const ID_PAGINA = /^[a-z][a-z0-9_]{0,29}(\.[a-z][a-z0-9_]{0,29}){0,2}$/;
 
 // Roles de la plantilla `tobt` del núcleo (core/src/modelos/plantillas.js).
 const MESERO = ["estacion:creacion", "estacion:carta", "documento:crear", "documento:leer", "documento:editar", "catalogo:leer", "cliente:leer", "cliente:crear"];
-const COCINA = ["estacion:cocina", "documento:leer", "documento:editar"];
+const COCINA = ["estacion:cocina", "documento:leer", "documento:editar", "catalogo:disponibilidad"];
 const yoCon = (permisos, servicios = ["tobt"], extra = {}) => ({
   usuario: { id: "u1" }, empresaActivaId: "e1", permisos, servicios, paginaPrincipal: null, ...extra,
 });
@@ -61,17 +61,17 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => 
 
 test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
-  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
   assert.deepEqual(ids(yoCon([], [])), ["cuenta.perfil", "empresa.datos"]);
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
-  assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
 });
 
 test("accesibles: sin el servicio contratado no hay acceso, ni siquiera con `*`", () => {

@@ -122,6 +122,15 @@ export const DESTINOS = [
     disponible: true,
     abre: { enlace: "tobt/#cocina" },
   },
+  {
+    id: "tobt.disponibilidad",
+    titulo: "Platos agotados",
+    descripcion: "Marcar lo que hoy no hay y quitarlo cuando vuelve.",
+    requiere: "catalogo:disponibilidad",
+    servicio: "tobt",
+    disponible: true,
+    abre: { enlace: "tobt/#disponibilidad" },
+  },
 ];
 
 /** Los destinos que esta persona puede ver ahora: disponibles, con servicio contratado y con permiso. */
