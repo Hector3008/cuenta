@@ -146,7 +146,7 @@ test("permisos: la pestaña pide promocion:leer y el servicio tobt; gestionar ta
   assert.deepEqual([capacidades(["promocion:leer"]).promociones.gestionar, capacidades(["promocion:gestionar"]).promociones.gestionar], [false, false]);
   assert.equal(capacidades(["promocion:leer", "promocion:gestionar"]).promociones.gestionar, true);
   assert.equal(capacidades(["*"]).promociones.gestionar, true);
-  assert.deepEqual(ids(["*"], ["tobt"]), ["equipo", "catalogo", "fidelizacion", "promociones", "anuncios", "reportes", "empresa"]);
+  assert.deepEqual(ids(["*"], ["tobt"]), ["equipo", "catalogo", "fidelizacion", "promociones", "anuncios", "resenas", "reportes", "empresa"]);
 });
 
 test("el destino de Inicio: pide promocion:leer y tobt", () => {

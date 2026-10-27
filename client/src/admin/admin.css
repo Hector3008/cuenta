@@ -107,3 +107,8 @@
 .adm-guia-item .adm-btn { flex: none; }
 .adm-guia-item--reservado { opacity: .75; }
 .adm-guia-etiqueta { margin-left: 6px; padding: 1px 6px; border: 1px solid var(--color-borde); border-radius: 999px; font-size: .6875rem; color: var(--color-texto-suave); white-space: nowrap; }
+
+/* Reseñas (5.62) */
+.adm-sub { display: block; color: var(--color-texto-suave); font-size: .8125rem; }
+.adm-estrellas { color: var(--color-secundario, var(--color-principal)); letter-spacing: 2px; }
+.adm-resena-texto { display: block; overflow-wrap: anywhere; white-space: pre-line; }

@@ -78,6 +78,15 @@ export const DESTINOS = [
     abre: { pantalla: "admin:anuncios" },
   },
   {
+    id: "empresa.resenas",
+    titulo: "Reseñas",
+    descripcion: "Opiniones de los clientes sobre los platos: ver las reportadas y ocultar las ofensivas.",
+    requiere: "resena:leer",
+    servicio: "tobt",
+    disponible: true,
+    abre: { pantalla: "admin:resenas" },
+  },
+  {
     id: "empresa.reportes",
     titulo: "Reportes",
     descripcion: "Ventas en el tiempo, por categoría, mesero y cliente, platos y horas pico.",

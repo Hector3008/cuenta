@@ -6,6 +6,7 @@ import { permite } from "../destinos.js";
 import { SERVICIO_REPORTES } from "./reportes-logica.js";
 import { SERVICIO_PROMOCIONES } from "./promociones-logica.js";
 import { SERVICIO_ANUNCIOS } from "./anuncios-logica.js";
+import { SERVICIO_RESENAS } from "./resenas-logica.js";
 
 export { permite };
 
@@ -39,6 +40,8 @@ export function capacidades(permisos) {
     promociones: { ver: p("promocion:leer"), gestionar: p("promocion:gestionar") && p("promocion:leer") },
     // Anuncios (5.49): eventos y publicidad de la carta pública. La lista pide anuncio:leer en el servidor.
     anuncios: { ver: p("anuncio:leer"), gestionar: p("anuncio:gestionar") && p("anuncio:leer") },
+    // Reseñas (5.62): opiniones de los clientes en la carta. La lista pide resena:leer en el servidor.
+    resenas: { ver: p("resena:leer"), gestionar: p("resena:gestionar") && p("resena:leer") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
     datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
@@ -58,6 +61,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "fidelizacion", titulo: "Fidelización", visible: c.fidelizacion.ver },
     { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
     { id: "anuncios", titulo: "Anuncios", visible: c.anuncios.ver && tieneServicio(SERVICIO_ANUNCIOS) },
+    { id: "resenas", titulo: "Reseñas", visible: c.resenas.ver && tieneServicio(SERVICIO_RESENAS) },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
   ].filter((s) => s.visible);

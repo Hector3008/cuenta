@@ -106,6 +106,14 @@ export const GUIA = [
     ],
   },
   {
+    id: "resenas",
+    titulo: "Reseñas de la carta",
+    permisos: [
+      { id: "resena:leer", titulo: "Ver reseñas", descripcion: "Ver las opiniones de los clientes sobre los platos, también las ocultas y cuántas veces las reportaron.", servicio: "tobt" },
+      { id: "resena:gestionar", titulo: "Moderar reseñas", descripcion: "Ocultar una reseña (deja de salir en la carta) y volver a mostrarla. Conviene darlo junto con resena:leer.", servicio: "tobt" },
+    ],
+  },
+  {
     id: "pedidos",
     titulo: "Pedidos",
     intro:
