@@ -42,6 +42,8 @@ export function capacidades(permisos) {
     anuncios: { ver: p("anuncio:leer"), gestionar: p("anuncio:gestionar") && p("anuncio:leer") },
     // Reseñas (5.62): opiniones de los clientes en la carta. La lista pide resena:leer en el servidor.
     resenas: { ver: p("resena:leer"), gestionar: p("resena:gestionar") && p("resena:leer") },
+    // Importar desde Excel (5.64): el catálogo pide catalogo:gestionar y los clientes cliente:gestionar, como en el servidor.
+    importar: { ver: p("catalogo:gestionar") || p("cliente:gestionar"), catalogo: p("catalogo:gestionar"), clientes: p("cliente:gestionar") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
     datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
@@ -62,6 +64,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
     { id: "anuncios", titulo: "Anuncios", visible: c.anuncios.ver && tieneServicio(SERVICIO_ANUNCIOS) },
     { id: "resenas", titulo: "Reseñas", visible: c.resenas.ver && tieneServicio(SERVICIO_RESENAS) },
+    { id: "importar", titulo: "Importar", visible: c.importar.ver },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
   ].filter((s) => s.visible);

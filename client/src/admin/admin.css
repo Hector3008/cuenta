@@ -112,3 +112,11 @@
 .adm-sub { display: block; color: var(--color-texto-suave); font-size: .8125rem; }
 .adm-estrellas { color: var(--color-secundario, var(--color-principal)); letter-spacing: 2px; }
 .adm-resena-texto { display: block; overflow-wrap: anywhere; white-space: pre-line; }
+
+/* Importar desde Excel (5.64) */
+.adm-importar .adm-pasos { padding-left: 1.2rem; display: grid; gap: .75rem; margin: .5rem 0 1rem; }
+.adm-importar .adm-pasos li > div { margin-top: .4rem; }
+.adm-importar input[type="file"] { max-width: 100%; }
+.adm-importar-lectura { display: grid; gap: .6rem; margin-top: 1rem; }
+.adm-importar .adm-tabs--sub { margin-bottom: .75rem; }
+.adm-importar caption { text-align: left; padding: .4rem .2rem; color: var(--texto-suave, inherit); font-size: .85rem; }

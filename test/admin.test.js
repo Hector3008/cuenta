@@ -21,7 +21,7 @@ test("admin (*) ve todas las pestañas y puede todo", () => {
   assert.ok(c.equipo.crear && c.equipo.editar && c.equipo.baja);
   assert.ok(c.catalogo.crear && c.catalogo.editar && c.catalogo.baja);
   assert.ok(c.roles.ver && c.roles.gestionar);
-  assert.deepEqual(ids(["*"]), ["equipo", "catalogo", "fidelizacion", "promociones", "anuncios", "resenas", "reportes", "empresa"]);
+  assert.deepEqual(ids(["*"]), ["equipo", "catalogo", "fidelizacion", "promociones", "anuncios", "resenas", "importar", "reportes", "empresa"]);
 });
 
 test("mesero (catalogo:leer): ve Catálogo y Empresa, sin botones de escritura ni roles", () => {
@@ -68,9 +68,9 @@ test("reportes: los ve quien tiene reporte:leer (o reporte:*), y solo si la empr
   for (const sin of [[], undefined, null, ["documento:leer", "catalogo:leer", "estacion:administracion"], ["reportes:leer"]])
     assert.ok(!capacidades(sin).reportes.ver, JSON.stringify(sin));
   assert.deepEqual(ids(["reporte:leer"]), ["reportes", "empresa"]);
-  assert.deepEqual(seccionesVisibles(["*"], ["tobt"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "promociones", "anuncios", "resenas", "reportes", "empresa"]);
-  assert.deepEqual(seccionesVisibles(["*"], ["siscore"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "empresa"]);
-  assert.deepEqual(seccionesVisibles(["*"], []).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "empresa"]);
+  assert.deepEqual(seccionesVisibles(["*"], ["tobt"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "promociones", "anuncios", "resenas", "importar", "reportes", "empresa"]);
+  assert.deepEqual(seccionesVisibles(["*"], ["siscore"]).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "importar", "empresa"]);
+  assert.deepEqual(seccionesVisibles(["*"], []).map((s) => s.id), ["equipo", "catalogo", "fidelizacion", "importar", "empresa"]);
   assert.deepEqual(seccionesVisibles(["reporte:leer"], ["tobt"]).map((s) => s.id), ["reportes", "empresa"]);
 });
 

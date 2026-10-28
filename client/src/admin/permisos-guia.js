@@ -50,7 +50,7 @@ export const GUIA = [
       { id: "catalogo:leer", titulo: "Ver el catálogo", descripcion: "Ver los ítems, categorías y precios. También lo necesita quien toma pedidos para elegir de la carta." },
       { id: "catalogo:crear", titulo: "Agregar ítems", descripcion: "Dar de alta ítems nuevos en el catálogo." },
       { id: "catalogo:editar", titulo: "Editar ítems", descripcion: "Cambiar el nombre, el precio, la descripción y la foto de un ítem." },
-      { id: "catalogo:gestionar", titulo: "Dar de baja e importar", descripcion: "Desactivar y reactivar ítems, e importar el catálogo de forma masiva." },
+      { id: "catalogo:gestionar", titulo: "Dar de baja e importar", descripcion: "Desactivar y reactivar ítems, e importar el catálogo de forma masiva (pestaña Importar, con un archivo de Excel)." },
       { id: "catalogo:disponibilidad", titulo: "Marcar platos agotados", descripcion: "Marcar qué platos hoy no hay y quitar la marca cuando vuelven. Es lo que necesita cocina: no da acceso a precios ni a editar el catálogo.", servicio: "tobt" },
     ],
   },
@@ -69,7 +69,7 @@ export const GUIA = [
       {
         id: "cliente:gestionar",
         titulo: "Baja y datos personales",
-        descripcion: "Desactivar y reactivar fichas, registrar o retirar el consentimiento al programa de puntos, y anonimizar a un cliente que pide cancelar sus datos.",
+        descripcion: "Desactivar y reactivar fichas, registrar o retirar el consentimiento al programa de puntos, anonimizar a un cliente que pide cancelar sus datos e importar clientes desde un archivo de Excel (pestaña Importar).",
       },
     ],
   },
