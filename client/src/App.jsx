@@ -16,7 +16,7 @@ export default function App() {
   const [cargando, setCargando] = useState(true);
   const [errorGrave, setErrorGrave] = useState(null);
   const [eligiendoOtra, setEligiendoOtra] = useState(false);
-  const [pantalla, setPantalla] = useState("inicio"); // "inicio" | "perfil" | "admin:equipo" | "admin:catalogo" | "admin:fidelizacion" | "admin:promociones" | "admin:anuncios" | "admin:resenas" | "admin:reportes" | "admin:empresa"
+  const [pantalla, setPantalla] = useState("inicio"); // "inicio" | "perfil" | "admin:equipo" | "admin:catalogo" | "admin:clientes" | "admin:fidelizacion" | "admin:promociones" | "admin:anuncios" | "admin:resenas" | "admin:reportes" | "admin:empresa"
   const [claveAplicada, setClaveAplicada] = useState(null); // persona+empresa para la que ya se decidió la página principal
 
   const olvidarSesion = useCallback(() => {

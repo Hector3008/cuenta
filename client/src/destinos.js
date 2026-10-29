@@ -110,8 +110,8 @@ export const DESTINOS = [
     descripcion: "Fichas, búsqueda y consentimientos.",
     requiere: "cliente:leer",
     servicio: null,
-    disponible: false,
-    abre: null,
+    disponible: true,
+    abre: { pantalla: "admin:clientes" },
   },
   {
     id: "tobt.pedidos",

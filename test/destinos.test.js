@@ -61,22 +61,22 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => 
 
 test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
-  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
-  assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
+  assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
   assert.deepEqual(ids(yoCon([], [])), ["cuenta.perfil", "empresa.datos"]);
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
-  assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "tobt.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
 });
 
 test("accesibles: sin el servicio contratado no hay acceso, ni siquiera con `*`", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]);
-  assert.deepEqual(idsVisibles(yoCon(["*"], [])), ["cuenta.perfil", "empresa.catalogo", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"], [])), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]);
 });
 
 test("accesibles: Reportes pide reporte:leer y el servicio contratado; el mesero no lo ve", () => {
@@ -122,7 +122,15 @@ test("resolver: cae a Inicio (null), sin error, si no aplica", () => {
 });
 
 test("resolver: un destino previsto (aún sin pantalla) no se abre aunque esté guardado", () => {
-  assert.equal(resolverPaginaPrincipal(yoCon(["*"], ["tobt"], { paginaPrincipal: "empresa.clientes" })), null);
+  const previsto = { id: "prueba.previsto", titulo: "Previsto", descripcion: "x", requiere: null, servicio: null, disponible: false, abre: null };
+  assert.equal(resolverPaginaPrincipal(yoCon(["*"], ["tobt"], { paginaPrincipal: "prueba.previsto" }), [previsto]), null);
+});
+
+test("resolver: Clientes (5.68) abre su pantalla con cliente:leer y solo con ese permiso", () => {
+  const con = (permisos) => resolverPaginaPrincipal(yoCon(permisos, ["tobt"], { paginaPrincipal: "empresa.clientes" }));
+  assert.deepEqual(con(["cliente:leer"])?.abre, { pantalla: "admin:clientes" });
+  assert.deepEqual(con(["*"])?.abre, { pantalla: "admin:clientes" });
+  assert.equal(con(["cliente:crear"]), null);
 });
 
 // ---------- marcas de "ya se abrió" ----------

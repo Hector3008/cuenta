@@ -30,6 +30,8 @@ export function capacidades(permisos) {
       editar: p("catalogo:editar"),
       baja: p("catalogo:gestionar"),
     },
+    // Clientes (5.68): cada botón pide el mismo permiso que la ruta del núcleo (leer, crear, editar y gestionar = baja, consentimientos y anonimizar).
+    clientes: { ver: p("cliente:leer"), crear: p("cliente:crear") && p("cliente:leer"), editar: p("cliente:editar") && p("cliente:leer"), gestionar: p("cliente:gestionar") && p("cliente:leer") },
     fidelizacion: {
       ver: p("fidelizacion:canjear") || p("fidelizacion:gestionar"),
       gestionar: p("fidelizacion:gestionar"),
@@ -60,6 +62,7 @@ export function seccionesVisibles(permisos, servicios) {
   return [
     { id: "equipo", titulo: "Equipo", visible: c.equipo.ver },
     { id: "catalogo", titulo: "Catálogo", visible: c.catalogo.ver },
+    { id: "clientes", titulo: "Clientes", visible: c.clientes.ver },
     { id: "fidelizacion", titulo: "Fidelización", visible: c.fidelizacion.ver },
     { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
     { id: "anuncios", titulo: "Anuncios", visible: c.anuncios.ver && tieneServicio(SERVICIO_ANUNCIOS) },
