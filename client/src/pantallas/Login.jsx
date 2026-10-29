@@ -64,6 +64,11 @@ export default function Login({ alEntrar }) {
         <button className="boton" type="submit" disabled={enviando || !correo || !password}>
           {enviando ? "Entrando…" : "Entrar"}
         </button>
+
+        {/* Página del gateway (fuera de esta app): desde /cuenta/ sube un nivel hasta /recuperar, con o sin prefijo. */}
+        <p className="sub">
+          <a href="../recuperar">¿Olvidaste tu contraseña?</a>
+        </p>
       </form>
     </main>
   );
