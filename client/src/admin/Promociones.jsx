@@ -4,7 +4,7 @@ import { Aviso, Campo } from "./piezas.jsx";
 import PruebaPromociones from "./PruebaPromociones.jsx";
 import {
   DIAS_SEMANA, EFECTOS_PROMOCION, TIPOS_PROMOCION,
-  formularioDePromocion, parsearPromocion, textoCuando, textoQueHace,
+  formularioDePromocion, parsearPromocion, textoCuando, textoQueHace, textoTopes,
 } from "./promociones-logica.js";
 
 // Sección Promociones (5.41): descuentos automáticos sobre lo que lleva un pedido (2x1, «si lleva A, B con descuento»,
@@ -31,6 +31,7 @@ export function normalizarPromocion(p) {
     vigencia: p?.vigencia ?? null,
     dias: Array.isArray(p?.dias) ? p.dias : null,
     horario: p?.horario ?? null,
+    topes: p?.topes ?? null,
   };
 }
 
@@ -150,7 +151,7 @@ export default function Promociones({ cap }) {
       <Aviso onCerrar={() => setError("")}>{error}</Aviso>
       <Aviso tipo="ok" onCerrar={() => setOk("")}>{ok}</Aviso>
       <p className="adm-nota">
-        Descuentos automáticos sobre lo que lleva un pedido. Por ahora aquí solo se definen y se prueban: todavía no se aplican en los cobros de Pedidos.
+        Descuentos automáticos sobre lo que lleva un pedido. Pedidos las aplica solo y las recalcula cada vez que cambia el pedido; aquí se definen y se prueban.
       </p>
 
       {cargando ? (
@@ -221,6 +222,22 @@ export default function Promociones({ cap }) {
                 <small className="adm-nota">Días y horas se leen con la hora de la empresa.</small>
               </fieldset>
 
+              <fieldset className="adm-cuando">
+                <legend>Límites de uso (opcional)</legend>
+                <small className="adm-nota">Un uso es una unidad con descuento: un 2x1 aplicado a 4 cafés son 2 usos. Vacío = sin límite.</small>
+                <span className="adm-fila-form">
+                  <Campo etiqueta="Máximo por día" ayuda="En toda la empresa. Cuenta por día, a la hora de la empresa.">
+                    <input inputMode="numeric" value={d.topeDiario} onChange={campo("topeDiario")} />
+                  </Campo>
+                  <Campo etiqueta="Máximo por pedido">
+                    <input inputMode="numeric" value={d.topePedido} onChange={campo("topePedido")} />
+                  </Campo>
+                  <Campo etiqueta="Máximo por cliente y día" ayuda="Solo vale para pedidos con un cliente asociado.">
+                    <input inputMode="numeric" value={d.topeCliente} onChange={campo("topeCliente")} />
+                  </Campo>
+                </span>
+              </fieldset>
+
               <Campo etiqueta="Prioridad" ayuda="Si dos promociones coinciden en un producto, gana la de número menor. Un producto recibe una sola, salvo que ambas sean acumulables.">
                 <input required inputMode="numeric" value={d.prioridad} onChange={campo("prioridad")} />
               </Campo>
@@ -264,6 +281,7 @@ export default function Promociones({ cap }) {
                         <td>
                           {p.nombre}{!p.activa && <em> (pausada)</em>}{p.acumulable && <small className="adm-falta" style={{ display: "block" }}>Acumulable</small>}
                           {p.descripcion && <small className="adm-falta" style={{ display: "block" }}>{p.descripcion}</small>}
+                          {textoTopes(p) && <small className="adm-falta" style={{ display: "block" }}>{textoTopes(p)}</small>}
                         </td>
                         <td>{textoQueHace(p)}</td>
                         <td>{textoCuando(p)}</td>

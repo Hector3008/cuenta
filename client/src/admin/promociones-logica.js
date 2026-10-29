@@ -51,10 +51,24 @@ export function formularioDePromocion(p) {
     dias: Array.isArray(p?.dias) ? [...p.dias] : [],
     horaDesde: p?.horario?.desde ?? "",
     horaHasta: p?.horario?.hasta ?? "",
+    topeDiario: p?.topes?.diario ? String(p.topes.diario) : "",
+    topePedido: p?.topes?.porPedido ? String(p.topes.porPedido) : "",
+    topeCliente: p?.topes?.porCliente ? String(p.topes.porCliente) : "",
     prioridad: String(p?.prioridad ?? 100),
     acumulable: p?.acumulable === true,
     activa: p?.activa !== false,
   };
+}
+
+export const MAX_TOPE = 100000;
+
+/** Un tope vacío es «sin tope» (null); si no, un entero de 1 a 100.000. */
+function parsearTope(texto, nombre) {
+  const t = textoDe(texto);
+  if (!t) return { valor: null };
+  const n = aNumero(t);
+  if (!Number.isInteger(n) || n < 1 || n > MAX_TOPE) return { error: `${nombre}: déjalo vacío o pon un entero de 1 a 100.000.` };
+  return { valor: n };
 }
 
 function selector(tipo, valor, nombre) {
@@ -129,6 +143,15 @@ export function parsearPromocion(f) {
   if (hd && hd === hh) return { ok: false, error: "Las horas «desde» y «hasta» no pueden ser iguales." };
   cuerpo.horario = hd ? { desde: hd, hasta: hh } : null;
 
+  const diario = parsearTope(f.topeDiario, "Máximo por día");
+  if (diario.error) return { ok: false, error: diario.error };
+  const porPedido = parsearTope(f.topePedido, "Máximo por pedido");
+  if (porPedido.error) return { ok: false, error: porPedido.error };
+  const porCliente = parsearTope(f.topeCliente, "Máximo por cliente y día");
+  if (porCliente.error) return { ok: false, error: porCliente.error };
+  // `null` cuando no hay ninguno: al editar, así se quitan de verdad.
+  cuerpo.topes = diario.valor || porPedido.valor || porCliente.valor ? { diario: diario.valor, porPedido: porPedido.valor, porCliente: porCliente.valor } : null;
+
   return { ok: true, cuerpo };
 }
 
@@ -169,6 +192,17 @@ export function textoCuando(p) {
   else if (v?.desde) partes.push(`desde el ${fechaCorta(v.desde)}`);
   else if (v?.hasta) partes.push(`hasta el ${fechaCorta(v.hasta)}`);
   return partes.length ? partes.join(" · ") : "Siempre";
+}
+
+/** Los límites de uso, en una frase («Máx. 50 al día · 2 por pedido · 1 por cliente al día»); vacío si no hay. */
+export function textoTopes(p) {
+  const t = p?.topes;
+  if (!t) return "";
+  const partes = [];
+  if (t.diario) partes.push(`Máx. ${t.diario} al día`);
+  if (t.porPedido) partes.push(`${t.porPedido} por pedido`);
+  if (t.porCliente) partes.push(`${t.porCliente} por cliente al día`);
+  return partes.join(" · ");
 }
 
 // ---------- probar con un pedido de ejemplo ----------

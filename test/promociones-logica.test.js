@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  formularioDePromocion, parsearPromocion, textoQueHace, textoCuando, fechaCorta,
+  formularioDePromocion, parsearPromocion, textoQueHace, textoCuando, textoTopes, fechaCorta,
   parsearItemsPrueba, lineaDePrueba, ahoraDeNavegador, DIAS_SEMANA, SERVICIO_PROMOCIONES,
 } from "../client/src/admin/promociones-logica.js";
 import { capacidades, seccionesVisibles } from "../client/src/admin/permisos.js";
@@ -27,7 +27,7 @@ test("el formulario vacío es un 2x1 listo para rellenar", () => {
 test("un 2x1: el cuerpo lleva solo lo del tipo, y vigencia, días y horario en null cuando están vacíos", () => {
   assert.deepEqual(ok(form()), {
     nombre: "2x1 en lattes", descripcion: null, tipo: "nxm", prioridad: 100, acumulable: false, activa: true,
-    objetivo: { itemCodigo: "LATTE" }, n: 2, m: 1, vigencia: null, dias: null, horario: null,
+    objetivo: { itemCodigo: "LATTE" }, n: 2, m: 1, vigencia: null, dias: null, horario: null, topes: null,
   });
 });
 
@@ -93,7 +93,7 @@ test("editar: el formulario de una promoción guardada vuelve a dar el mismo cue
   assert.deepEqual(ok(f), {
     nombre: "Combo", descripcion: "Con sándwich", tipo: "combo", prioridad: 20, acumulable: true, activa: false,
     objetivo: { categoria: "Cafés" }, disparador: { itemCodigo: "SAND" }, efecto: "porcentaje", valor: 12.5,
-    vigencia: { desde: "2026-11-01", hasta: null }, dias: [4, 5], horario: { desde: "18:00", hasta: "21:00" },
+    vigencia: { desde: "2026-11-01", hasta: null }, dias: [4, 5], horario: { desde: "18:00", hasta: "21:00" }, topes: null,
   });
 });
 
@@ -156,4 +156,29 @@ test("el destino de Inicio: pide promocion:leer y tobt", () => {
   assert.equal(ve(["*"], ["tobt"]), true);
   assert.equal(ve(["*"], ["siscore"]), false);
   assert.equal(ve(["fidelizacion:canjear"], ["tobt"]), false);
+});
+
+test("topes de uso: vacío es sin tope (null); con alguno se envían los tres; y se rechaza lo que no es un entero de 1 a 100.000", () => {
+  assert.equal(ok(form()).topes, null);
+  assert.deepEqual(ok(form({ topeDiario: " 50 " })).topes, { diario: 50, porPedido: null, porCliente: null });
+  assert.deepEqual(ok(form({ topePedido: "2", topeCliente: "1" })).topes, { diario: null, porPedido: 2, porCliente: 1 });
+  for (const malo of ["0", "-1", "1,5", "abc", "100001"]) {
+    mal(form({ topeDiario: malo }), /Máximo por día/);
+    mal(form({ topePedido: malo }), /Máximo por pedido/);
+    mal(form({ topeCliente: malo }), /Máximo por cliente/);
+  }
+});
+
+test("topes: editar muestra los guardados, y quitarlos todos envía null para que se borren", () => {
+  const f = formularioDePromocion({ nombre: "X", tipo: "nxm", n: 2, m: 1, objetivo: { itemCodigo: "A" }, topes: { diario: 10, porPedido: null, porCliente: 1 } });
+  assert.deepEqual([f.topeDiario, f.topePedido, f.topeCliente], ["10", "", "1"]);
+  assert.deepEqual(ok(f).topes, { diario: 10, porPedido: null, porCliente: 1 });
+  assert.equal(ok({ ...f, topeDiario: "", topeCliente: "" }).topes, null);
+});
+
+test("topes: el texto de la lista", () => {
+  assert.equal(textoTopes({ topes: null }), "");
+  assert.equal(textoTopes({}), "");
+  assert.equal(textoTopes({ topes: { diario: 50, porPedido: 2, porCliente: 1 } }), "Máx. 50 al día · 2 por pedido · 1 por cliente al día");
+  assert.equal(textoTopes({ topes: { diario: null, porPedido: 3, porCliente: null } }), "3 por pedido");
 });
