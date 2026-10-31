@@ -81,6 +81,9 @@ export const urlDeServicio = (ruta) => BASE + String(ruta).replace(/^\/+/, "");
 export const api = {
   yo: async () => normalizarYo(await pedir("GET", "auth/yo")),
   login: (correo, password) => pedir("POST", "auth/login", { correo, password }),
+  // Entrar con Google (5.69): `googleConfig` dice si está activado y con qué Client ID (público); `loginGoogle` manda el ID token.
+  googleConfig: () => pedir("GET", "auth/google/config"),
+  loginGoogle: (credencial) => pedir("POST", "auth/google", { credencial }),
   logout: () => pedir("POST", "auth/logout", {}),
   elegirEmpresa: (empresaId) => pedir("POST", "auth/empresa", { empresaId }),
   cambiarPassword: (passwordActual, passwordNueva) =>

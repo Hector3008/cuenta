@@ -172,3 +172,9 @@ body {
 /* Enlace del login («¿Olvidaste tu contraseña?», 5.67): sin esto salía con el azul por defecto del navegador, ilegible en oscuro. */
 .sub a { color: var(--color-texto-suave); text-decoration: underline; text-underline-offset: 2px; }
 .sub a:hover { color: var(--color-texto); }
+
+/* Entrar con Google en el login (5.69) */
+.separador-o { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--color-texto-suave); font-size: .875rem; }
+.separador-o::before, .separador-o::after { content: ""; flex: 1; height: 1px; background: var(--color-borde); }
+.caja-google { display: flex; justify-content: center; min-height: 44px; margin-bottom: 16px; }
+.sub-google { margin: 0; font-size: .875rem; color: var(--color-texto-suave); }
