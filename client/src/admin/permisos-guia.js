@@ -114,6 +114,13 @@ export const GUIA = [
     ],
   },
   {
+    id: "stock",
+    titulo: "Stock",
+    permisos: [
+      { id: "stock:leer", titulo: "Ver el dashboard de stock", descripcion: "Entrar a la página de stock: la snapshot diaria y su predicción. Solo la empresa configurada en el servidor (STOCK_EMPRESA_ID) puede abrirla.", servicio: "stock" },
+    ],
+  },
+  {
     id: "pedidos",
     titulo: "Pedidos",
     intro:

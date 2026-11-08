@@ -140,6 +140,15 @@ export const DESTINOS = [
     disponible: true,
     abre: { enlace: "tobt/#disponibilidad" },
   },
+  {
+    id: "stock.dashboard",
+    titulo: "Stock",
+    descripcion: "Dashboard de la snapshot diaria de stock y su predicción.",
+    requiere: "stock:leer",
+    servicio: "stock",
+    disponible: true,
+    abre: { enlace: "stock/" },
+  },
 ];
 
 /** Los destinos que esta persona puede ver ahora: disponibles, con servicio contratado y con permiso. */

@@ -168,3 +168,11 @@ test("marcas: con el almacenamiento bloqueado actúa como 'ya se abrió' (nada d
   assert.doesNotThrow(() => marcarAbierta("x", roto));
   assert.doesNotThrow(() => olvidarMarcas(roto));
 });
+
+test("accesibles: Stock solo aparece con el servicio `stock` contratado y el permiso stock:leer", () => {
+  const ids = (yo) => destinosAccesibles(yo).map((d) => d.id);
+  assert.ok(ids(yoCon(["*"], ["topd", "stock"])).includes("stock.dashboard"));
+  assert.ok(!ids(yoCon(["*"], ["topd"])).includes("stock.dashboard")); // sin el servicio no se ofrece
+  assert.ok(!ids(yoCon(["documento:leer"], ["topd", "stock"])).includes("stock.dashboard")); // sin permiso tampoco
+  assert.ok(ids(yoCon(["stock:leer"], ["stock"])).includes("stock.dashboard"));
+});
