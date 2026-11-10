@@ -7,6 +7,7 @@ import { SERVICIO_REPORTES } from "./reportes-logica.js";
 import { SERVICIO_PROMOCIONES } from "./promociones-logica.js";
 import { SERVICIO_ANUNCIOS } from "./anuncios-logica.js";
 import { SERVICIO_RESENAS } from "./resenas-logica.js";
+import { SERVICIO_JUEGO } from "./juego-logica.js";
 
 export { permite };
 
@@ -44,6 +45,8 @@ export function capacidades(permisos) {
     anuncios: { ver: p("anuncio:leer"), gestionar: p("anuncio:gestionar") && p("anuncio:leer") },
     // Reseñas (5.62): opiniones de los clientes en la carta. La lista pide resena:leer en el servidor.
     resenas: { ver: p("resena:leer"), gestionar: p("resena:gestionar") && p("resena:leer") },
+    // Juego de agatas (5.82): configuración. El mesero valida premios en la pantalla de agatas, no aquí.
+    juego: { ver: p("juego:configurar"), gestionar: p("juego:configurar") },
     // Importar desde Excel (5.64): el catálogo pide catalogo:gestionar y los clientes cliente:gestionar, como en el servidor.
     importar: { ver: p("catalogo:gestionar") || p("cliente:gestionar"), catalogo: p("catalogo:gestionar"), clientes: p("cliente:gestionar") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
@@ -67,6 +70,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "promociones", titulo: "Promociones", visible: c.promociones.ver && tieneServicio(SERVICIO_PROMOCIONES) },
     { id: "anuncios", titulo: "Anuncios", visible: c.anuncios.ver && tieneServicio(SERVICIO_ANUNCIOS) },
     { id: "resenas", titulo: "Reseñas", visible: c.resenas.ver && tieneServicio(SERVICIO_RESENAS) },
+    { id: "juego", titulo: "Juego", visible: c.juego.ver && tieneServicio(SERVICIO_JUEGO) },
     { id: "importar", titulo: "Importar", visible: c.importar.ver },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },

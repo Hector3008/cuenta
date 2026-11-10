@@ -21,7 +21,7 @@ test("admin (*) ve todas las pestañas y puede todo", () => {
   assert.ok(c.equipo.crear && c.equipo.editar && c.equipo.baja);
   assert.ok(c.catalogo.crear && c.catalogo.editar && c.catalogo.baja);
   assert.ok(c.roles.ver && c.roles.gestionar);
-  assert.deepEqual(ids(["*"]), ["equipo", "catalogo", "clientes", "fidelizacion", "promociones", "anuncios", "resenas", "importar", "reportes", "empresa"]);
+  assert.deepEqual(ids(["*"]), ["equipo", "catalogo", "clientes", "fidelizacion", "promociones", "anuncios", "resenas", "juego", "importar", "reportes", "empresa"]);
 });
 
 test("mesero (catalogo:leer): ve Catálogo y Empresa, sin botones de escritura ni roles", () => {
@@ -51,7 +51,7 @@ test("sin permisos o con una respuesta rara: solo Empresa (fallo seguro)", () =>
 
 test("cada destino que abre una pantalla de admin existe y respeta los permisos de su pestaña", () => {
   const abre = DESTINOS.filter((d) => d.disponible && d.abre?.pantalla?.startsWith("admin:"));
-  assert.deepEqual(abre.map((d) => d.abre.pantalla).sort(), ["admin:anuncios", "admin:catalogo", "admin:clientes", "admin:empresa", "admin:equipo", "admin:fidelizacion", "admin:promociones", "admin:reportes", "admin:resenas"]);
+  assert.deepEqual(abre.map((d) => d.abre.pantalla).sort(), ["admin:anuncios", "admin:catalogo", "admin:clientes", "admin:empresa", "admin:equipo", "admin:fidelizacion", "admin:juego", "admin:promociones", "admin:reportes", "admin:resenas"]);
   const reportes = abre.find((d) => d.abre.pantalla === "admin:reportes");
   assert.equal(reportes.requiere, "reporte:leer");
   assert.equal(reportes.servicio, "tobt");

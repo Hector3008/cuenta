@@ -56,6 +56,7 @@ export function normalizarYo(d) {
   const empresas = (yo.empresas ?? yo.membresias ?? []).map((e) => ({
     id: e.empresaId ?? e.id ?? e._id,
     nombre: e.nombre ?? e.empresa?.nombre ?? e.slug ?? "Empresa",
+    slug: typeof (e.slug ?? e.empresa?.slug) === "string" ? (e.slug ?? e.empresa?.slug) : null,
     rol: e.rol?.nombre ?? e.rol ?? null,
   }));
   return {

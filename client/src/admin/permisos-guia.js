@@ -114,6 +114,15 @@ export const GUIA = [
     ],
   },
   {
+    id: "juego",
+    titulo: "Juego de agatas",
+    permisos: [
+      { id: "juego:configurar", titulo: "Configurar el juego", descripcion: "Editar los colores, las piezas y sus preguntas, los premios, los textos y los topes del juego, y sacar el QR del local.", servicio: "agatas" },
+      { id: "juego:validar", titulo: "Entregar premios del juego", descripcion: "Validar el código de canje de un premio y marcarlo como entregado o anularlo, desde la pantalla del mesero. Conviene darlo junto con juego:leer.", servicio: "agatas" },
+      { id: "juego:leer", titulo: "Ver jugadores y premios", descripcion: "Ver la lista de jugadores y de premios pendientes, entregados y anulados en la pantalla del mesero.", servicio: "agatas" },
+    ],
+  },
+  {
     id: "stock",
     titulo: "Stock",
     permisos: [
