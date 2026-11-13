@@ -192,3 +192,51 @@ test("normalizarYo conserva el slug de la empresa", async () => {
   assert.equal(yo.empresas[0].slug, "gecko");
   assert.equal(yo.empresas[1].slug, null);
 });
+
+// ───── Reinicio programado (5.83) ─────
+test("reinicio: una respuesta sin el campo da «nunca» y una rota se corrige", async () => {
+  const j = await import("../client/src/admin/juego-logica.js");
+  assert.equal(base().reinicio.modo, "nunca");
+  const r = respuesta();
+  r.config.reinicio = { modo: "semanal", hora: "25:99", diaSemana: 9, zona: "" };
+  const n = j.normalizarRespuesta(r).config.reinicio;
+  assert.deepEqual(n, { modo: "semanal", hora: "00:00", diaSemana: 1, zona: "America/Lima" });
+});
+
+test("reinicio: validación de modo, hora, día y zona (solo cuando está activo)", async () => {
+  const j = await import("../client/src/admin/juego-logica.js");
+  const campos = (f) => {
+    const c = base();
+    f(c.reinicio);
+    return j.problemas(c).map((p) => p.campo);
+  };
+  assert.deepEqual(campos(() => {}), []);
+  assert.deepEqual(campos((r) => { r.modo = "diario"; r.hora = "00:00"; }), []);
+  assert.ok(campos((r) => { r.modo = "diario"; r.hora = "7:5"; }).includes("reinicio"));
+  assert.ok(campos((r) => { r.modo = "diario"; r.zona = "Marte/Olimpo"; }).includes("reinicio"));
+  assert.ok(campos((r) => { r.modo = "semanal"; r.diaSemana = 7; }).includes("reinicio"));
+  assert.ok(campos((r) => { r.modo = "cada-rato"; }).includes("reinicio"));
+  assert.deepEqual(campos((r) => { r.modo = "nunca"; r.hora = "xx"; r.zona = "no"; }), []);
+});
+
+test("reinicio: el cambio se manda completo, avisa del efecto y tiene resumen", async () => {
+  const j = await import("../client/src/admin/juego-logica.js");
+  const o = base();
+  const b = structuredClone(o);
+  b.reinicio = { modo: "diario", hora: "00:00", diaSemana: 1, zona: "America/Lima" };
+  assert.deepEqual(Object.keys(j.cambiosParaGuardar(o, b)), ["reinicio"]);
+  assert.ok(j.avisosDeCambio(o, b).some((m) => /reinician de inmediato/.test(m)));
+  assert.deepEqual(j.avisosDeCambio(o, o), []);
+  assert.match(j.resumenReinicio(b.reinicio), /todos los días a las 00:00 \(America\/Lima\)/);
+  assert.match(j.resumenReinicio({ ...b.reinicio, modo: "semanal", diaSemana: 0, hora: "06:30" }), /cada domingo a las 06:30/);
+  assert.match(j.resumenReinicio(o.reinicio), /no se reinician solas/);
+});
+
+test("reinicio: el front acepta lo mismo que agatas (modos, valores por defecto)", async () => {
+  const j = await import("../client/src/admin/juego-logica.js");
+  const ruta = new URL("../../agatas/src/reinicio.js", import.meta.url);
+  let s;
+  try { s = await import(ruta.href); } catch { return; } // sin el repo hermano, no se compara
+  assert.deepEqual(j.MODOS_REINICIO.map(([m]) => m), [...s.MODOS_REINICIO]);
+  assert.deepEqual(j.REINICIO_POR_DEFECTO, { ...s.REINICIO_POR_DEFECTO });
+});

@@ -17,6 +17,36 @@ export const CAMPOS_REGLAS = [
   ["cookieDias", "La partida se recuerda", "Cuánto dura la partida en el celular de quien juega.", 1, 365, "días"],
 ];
 
+/** Reinicio programado (5.83): mismas reglas que agatas/src/reinicio.js. */
+export const MODOS_REINICIO = [
+  ["nunca", "Nunca"],
+  ["diario", "Todos los días"],
+  ["semanal", "Una vez por semana"],
+];
+export const DIAS_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+export const REINICIO_POR_DEFECTO = { modo: "nunca", hora: "00:00", diaSemana: 1, zona: "America/Lima" };
+export const ZONAS_COMUNES = [
+  "America/Lima", "America/Bogota", "America/Mexico_City", "America/Santiago", "America/Argentina/Buenos_Aires", "America/Caracas",
+  "America/New_York", "America/Los_Angeles", "Europe/Madrid", "UTC",
+];
+const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export function zonaValida(zona) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zona });
+    return typeof zona === "string" && zona.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Frase para el administrador: «Las partidas se reinician todos los días a las 00:00 (America/Lima).» */
+export function resumenReinicio(r) {
+  if (!r || r.modo === "nunca") return "Las partidas no se reinician solas: duran hasta que el personal las retire.";
+  const cuando = r.modo === "semanal" ? `cada ${DIAS_SEMANA[r.diaSemana] ?? "?"}` : "todos los días";
+  return `Las partidas se reinician ${cuando} a las ${r.hora} (${r.zona}).`;
+}
+
 const RE_ID = /^[a-z0-9][a-z0-9_-]{0,23}$/;
 const RE_HEX = /^#[0-9a-f]{6}$/;
 
@@ -37,6 +67,12 @@ export function normalizarRespuesta(r) {
     preguntas: c.preguntas && typeof c.preguntas === "object" && !Array.isArray(c.preguntas) ? { ...c.preguntas } : {},
     textos: { instrucciones: String(c.textos?.instrucciones ?? ""), reglas: String(c.textos?.reglas ?? "") },
     reglas: {},
+    reinicio: {
+      modo: MODOS_REINICIO.some(([m]) => m === c.reinicio?.modo) ? c.reinicio.modo : REINICIO_POR_DEFECTO.modo,
+      hora: typeof c.reinicio?.hora === "string" && RE_HORA.test(c.reinicio.hora) ? c.reinicio.hora : REINICIO_POR_DEFECTO.hora,
+      diaSemana: Number.isInteger(c.reinicio?.diaSemana) && c.reinicio.diaSemana >= 0 && c.reinicio.diaSemana <= 6 ? c.reinicio.diaSemana : REINICIO_POR_DEFECTO.diaSemana,
+      zona: typeof c.reinicio?.zona === "string" && c.reinicio.zona ? c.reinicio.zona : REINICIO_POR_DEFECTO.zona,
+    },
   };
   for (const [k, , , min] of CAMPOS_REGLAS) config.reglas[k] = Number.isInteger(c.reglas?.[k]) ? c.reglas[k] : min;
   return {
@@ -118,6 +154,13 @@ export function problemas(config) {
     const v = config.reglas[k];
     if (!Number.isInteger(v) || v < min || v > max) mal("reglas", `«${CAMPOS_REGLAS.find((r) => r[0] === k)[1]}» va de ${min} a ${max}.`);
   }
+  const r = config.reinicio;
+  if (!MODOS_REINICIO.some(([m]) => m === r.modo)) mal("reinicio", "Elige cuándo se reinicia el juego.");
+  else if (r.modo !== "nunca") {
+    if (!RE_HORA.test(r.hora)) mal("reinicio", "La hora del reinicio debe ser del tipo 00:00 a 23:59.");
+    if (r.modo === "semanal" && !(Number.isInteger(r.diaSemana) && r.diaSemana >= 0 && r.diaSemana <= 6)) mal("reinicio", "Elige el día de la semana del reinicio.");
+    if (!zonaValida(r.zona)) mal("reinicio", `La zona horaria «${r.zona}» no existe. Usa una como America/Lima.`);
+  }
   for (const [k, v] of Object.entries(config.preguntas)) if (String(v).length > LIMITES.preguntaMax) mal("preguntas", `La pregunta «${k}» pasa de ${LIMITES.preguntaMax} caracteres.`);
   if (config.textos.instrucciones.length > LIMITES.textoMax || config.textos.reglas.length > LIMITES.textoMax) mal("textos", `Los textos llegan hasta ${LIMITES.textoMax} caracteres.`);
   return lista;
@@ -132,6 +175,9 @@ export function avisosDeCambio(original, borrador) {
   if (quitados.length) av.push(`Quitas ${quitados.map((c) => `«${c.nombre}»`).join(", ")}: quien ya tenga piezas de ese color las conservará sin color. Conviene cambiar los colores solo antes de empezar a jugar.`);
   if (borrador.agatasPorColor < original.agatasPorColor) av.push("Reduces las piezas por color: las partidas en curso pueden quedar con piezas que ya no existen.");
   if (borrador.manoPorJugador !== original.manoPorJugador) av.push("El tamaño de la mano solo afecta a las partidas nuevas.");
+  if (JSON.stringify(original.reinicio) !== JSON.stringify(borrador.reinicio) && borrador.reinicio.modo !== "nunca") {
+    av.push("Al guardar, las partidas empezadas antes del último reinicio de este horario se reinician de inmediato (sus premios pendientes se pueden canjear igual).");
+  }
   return av;
 }
 

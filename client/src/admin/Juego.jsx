@@ -5,6 +5,7 @@ import { Aviso, BotonConfirmar, Campo } from "./piezas.jsx";
 import QrJuego from "./QrJuego.jsx";
 import { empresaActiva } from "./permisos.js";
 import {
+  DIAS_SEMANA, MODOS_REINICIO, ZONAS_COMUNES, resumenReinicio,
   CAMPOS_REGLAS, LIMITES, avisosDeCambio, cambiosParaGuardar, enlaceJuego, enlaceMesero, normalizarRespuesta, nuevoColor, nuevoPremio,
   problemas, quitarColor, renombrarColor, resumenPreguntas, sinPregunta,
 } from "./juego-logica.js";
@@ -175,6 +176,45 @@ export default function Juego({ yo }) {
             })}
           </fieldset>
         ))}
+      </details>
+
+      <details className="adm-juego-bloque" open>
+        <summary>Reinicio programado</summary>
+        <p className="adm-nota">Cuándo vuelve el juego a empezar de cero. Al reiniciar, las personas que jugaban entran de nuevo con una partida nueva; los premios que no canjearon se pueden canjear igual con el mesero.</p>
+        <div className="adm-juego-grid">
+          <Campo etiqueta="El juego se reinicia">
+            <select value={borrador.reinicio.modo} onChange={(e) => set((b) => ((b.reinicio.modo = e.target.value), b))}>
+              {MODOS_REINICIO.map(([v, t]) => (
+                <option key={v} value={v}>{t}</option>
+              ))}
+            </select>
+          </Campo>
+          {borrador.reinicio.modo === "semanal" && (
+            <Campo etiqueta="Día de la semana">
+              <select value={borrador.reinicio.diaSemana} onChange={(e) => set((b) => ((b.reinicio.diaSemana = Number(e.target.value)), b))}>
+                {DIAS_SEMANA.map((d, i) => (
+                  <option key={d} value={i}>{capital(d)}</option>
+                ))}
+              </select>
+            </Campo>
+          )}
+          {borrador.reinicio.modo !== "nunca" && (
+            <>
+              <Campo etiqueta="A las" ayuda="00:00 es la medianoche.">
+                <input type="time" value={borrador.reinicio.hora} onChange={(e) => set((b) => ((b.reinicio.hora = e.target.value), b))} />
+              </Campo>
+              <Campo etiqueta="Zona horaria" ayuda="La hora de tu local, por ejemplo America/Lima.">
+                <input list="zonas-reinicio" spellCheck={false} value={borrador.reinicio.zona} onChange={(e) => set((b) => ((b.reinicio.zona = e.target.value.trim()), b))} />
+                <datalist id="zonas-reinicio">
+                  {ZONAS_COMUNES.map((z) => (
+                    <option key={z} value={z} />
+                  ))}
+                </datalist>
+              </Campo>
+            </>
+          )}
+        </div>
+        <p className="adm-nota" data-testid="resumen-reinicio"><strong>{resumenReinicio(borrador.reinicio)}</strong></p>
       </details>
 
       <details className="adm-juego-bloque">
