@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, mensajeAdmin } from "./http.js";
 import { Aviso, Campo } from "./piezas.jsx";
 import {
@@ -8,7 +8,7 @@ import {
 
 // Vista «Insumos» de Inventario (5.77): lista con existencia, costo promedio y valor; alta y edición de insumos con sus
 // presentaciones; compra, merma, conteo y saldo inicial.
-export default function InventarioInsumos({ cap, insumos, valorizacion, recargar }) {
+export default function InventarioInsumos({ cap, insumos, valorizacion, recargar, preparar = null, alPreparar = () => {} }) {
   const [busca, setBusca] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
   const [soloAlertas, setSoloAlertas] = useState(false);
@@ -17,6 +17,19 @@ export default function InventarioInsumos({ cap, insumos, valorizacion, recargar
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+
+  // Viene de «Corregir» en Movimientos: abre la compra o merma ya llena.
+  useEffect(() => {
+    if (!preparar) return;
+    const insumo = insumos.find((i) => i.id === preparar.insumoId);
+    if (insumo && ACCIONES[preparar.tipo]) {
+      setOk("");
+      setError("");
+      setFormulario(null);
+      setAccion({ tipo: preparar.tipo, insumo, datos: preparar.datos });
+    }
+    alPreparar();
+  }, [preparar, insumos, alPreparar]);
 
   const visibles = useMemo(() => {
     const t = busca.trim().toLowerCase();

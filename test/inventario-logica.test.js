@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ACCIONES, SERVICIO_INVENTARIO, alertaDeInsumo, costoDeReceta, factorDe, formularioDeInsumo, formularioDeMovimiento, formularioDeReceta,
+  ACCIONES, SERVICIO_INVENTARIO, TIPOS_MOVIMIENTO, accionDeCorreccion, formularioDeCorreccion, parsearAnulacion, puedeAnular, alertaDeInsumo, costoDeReceta, factorDe, formularioDeInsumo, formularioDeMovimiento, formularioDeReceta,
   margenDePlato, normalizarInsumo, normalizarMovimiento, normalizarReceta, parsearInsumo, parsearMovimiento, parsearNumero, parsearReceta,
   resumenValorizacion, textoCantidad, textoPresentacion, vistaPrevia,
 } from "../client/src/admin/inventario-logica.js";
@@ -140,4 +140,39 @@ test("destinos y guía: Inicio ofrece Inventario y los tres permisos están expl
   assert.ok(!ids(yo(["documento:leer"], ["tobt"])).includes("empresa.inventario"));
   for (const p of ["kardex:leer", "kardex:registrar", "kardex:gestionar"]) assert.ok(explicacionDe(p), p);
   assert.ok(GUIA.some((g) => g.id === "inventario"));
+});
+
+test("corregir movimientos (5.84): qué se puede anular y con qué se rehace", () => {
+  const compra = normalizarMovimiento({ id: "m1", insumoId: "a1", tipo: "compra", cantidad: 1000000, costoUnitario: 0.03, valor: 30000, presentacion: { nombre: "kilo", cantidad: 1000, factor: 1000 }, detalle: "factura 12" });
+  assert.equal(TIPOS_MOVIMIENTO.anulacion, "Anulación");
+  assert.equal(puedeAnular(compra), true);
+  assert.equal(accionDeCorreccion(compra), "compra");
+  assert.equal(puedeAnular({ ...compra, anulado: true }), false);
+  assert.equal(accionDeCorreccion({ ...compra, anulado: true }), null);
+  for (const tipo of ["consumo", "reversa", "anulacion"]) assert.equal(puedeAnular({ tipo, anulado: false }), false);
+  const merma = { tipo: "merma", cantidad: -300, anulado: false };
+  assert.equal(accionDeCorreccion(merma), "merma");
+  for (const tipo of ["ajuste", "inventario_inicial"]) {
+    assert.equal(puedeAnular({ tipo }), true);
+    assert.equal(accionDeCorreccion({ tipo }), null);
+  }
+  assert.equal(normalizarMovimiento({ anulado: true, anulaA: 7 }).anulado, true);
+  assert.equal(normalizarMovimiento({}).anulado, false);
+});
+
+test("corregir movimientos: el formulario sale lleno y pasa la validación", () => {
+  const insumo = normalizarInsumo({ id: "a1", codigo: "CAFE", nombre: "Café", unidad: "gr", presentaciones: [{ nombre: "kilo", factor: 1000 }] });
+  const compra = normalizarMovimiento({ id: "m1", insumoId: "a1", tipo: "compra", cantidad: 1000000, valor: 30000, presentacion: { nombre: "kilo", cantidad: 1000, factor: 1000 }, detalle: "factura 12" });
+  const f = formularioDeCorreccion(compra);
+  assert.deepEqual([f.cantidad, f.presentacion, f.modoCosto, f.costo, f.detalle], ["1000", "kilo", "total", "30000", "factura 12"]);
+  assert.deepEqual(parsearMovimiento("compra", f, insumo), { ok: true, cuerpo: { cantidad: 1000, presentacion: "kilo", costoTotal: 30000, detalle: "factura 12" } });
+  const sinPres = formularioDeCorreccion(normalizarMovimiento({ tipo: "merma", cantidad: -300, detalle: "humedad" }));
+  assert.deepEqual([sinPres.cantidad, sinPres.presentacion, sinPres.detalle], ["300", "", "humedad"]);
+  assert.equal(parsearMovimiento("merma", sinPres, insumo).ok, true);
+});
+
+test("anular pide un motivo", () => {
+  assert.equal(parsearAnulacion("  ").ok, false);
+  assert.equal(parsearAnulacion("x".repeat(201)).ok, false);
+  assert.deepEqual(parsearAnulacion("  me  equivoqué "), { ok: true, cuerpo: { detalle: "me equivoqué" } });
 });

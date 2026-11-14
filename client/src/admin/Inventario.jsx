@@ -21,6 +21,7 @@ export default function Inventario({ cap }) {
   const [valorizacion, setValorizacion] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [preparar, setPreparar] = useState(null); // { tipo, insumoId, datos }: una compra o merma por volver a registrar
 
   const cargar = useCallback(async () => {
     setError("");
@@ -48,6 +49,9 @@ export default function Inventario({ cap }) {
     cargar();
   }, [cargar]);
 
+  // «Corregir» un movimiento: ya anulado, se abre el formulario de la compra o merma con los datos para cambiar lo que estaba mal.
+  const corregir = (p) => { setPreparar(p); setVista("insumos"); };
+
   return (
     <section aria-labelledby="t-inventario">
       <header className="adm-cabecera">
@@ -67,9 +71,9 @@ export default function Inventario({ cap }) {
         <p className="adm-vacio">Cargando…</p>
       ) : (
         <>
-          {vista === "insumos" && <InventarioInsumos cap={cap} insumos={insumos} valorizacion={valorizacion} recargar={cargar} />}
+          {vista === "insumos" && <InventarioInsumos cap={cap} insumos={insumos} valorizacion={valorizacion} recargar={cargar} preparar={preparar} alPreparar={() => setPreparar(null)} />}
           {vista === "recetas" && <InventarioRecetas cap={cap} insumos={insumos} />}
-          {vista === "movimientos" && <InventarioMovimientos insumos={insumos} />}
+          {vista === "movimientos" && <InventarioMovimientos cap={cap} insumos={insumos} recargar={cargar} alCorregir={corregir} />}
         </>
       )}
     </section>

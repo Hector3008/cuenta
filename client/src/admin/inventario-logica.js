@@ -17,6 +17,7 @@ export const TIPOS_MOVIMIENTO = {
   reversa: "Reversa (ítem anulado)",
   merma: "Merma",
   ajuste: "Ajuste (conteo)",
+  anulacion: "Anulación",
 };
 
 const texto = (t) => String(t ?? "").trim().replace(/\s+/g, " ");
@@ -66,6 +67,8 @@ export function normalizarMovimiento(m) {
     presentacion: m?.presentacion ?? null,
     referencia: m?.referencia ?? null,
     detalle: m?.detalle ?? null,
+    anulaA: m?.anulaA ? String(m.anulaA) : null,
+    anulado: m?.anulado === true,
     ts: m?.ts ?? null,
   };
 }
@@ -233,6 +236,49 @@ export function vistaPrevia(accion, f, insumo) {
     if (c.ok && base > 0) costoUnitario = redondear(f.modoCosto === "total" ? c.valor / base : c.valor / factor, 6);
   }
   return { base, costoUnitario };
+}
+
+// ---------- corregir movimientos (5.84) ----------
+
+const ANULABLES = ["inventario_inicial", "compra", "merma", "ajuste"];
+const CORREGIBLES = { compra: "compra", merma: "merma" };
+
+/** ¿Se puede anular este movimiento? Compras, mermas, conteos y saldo inicial que aún no se anularon. */
+export function puedeAnular(m) {
+  return !!m && ANULABLES.includes(m.tipo) && !m.anulado;
+}
+
+/** La acción con la que se vuelve a registrar un movimiento anulado (`compra` o `merma`), o null: el saldo inicial y los conteos se rehacen por su cuenta. */
+export function accionDeCorreccion(m) {
+  return puedeAnular(m) ? (CORREGIBLES[m.tipo] ?? null) : null;
+}
+
+/** El formulario de la acción ya lleno con lo que tenía el movimiento, para cambiar solo lo que estaba mal. El costo se deja como total pagado. */
+export function formularioDeCorreccion(m) {
+  const f = formularioDeMovimiento();
+  const p = m?.presentacion;
+  if (p && p.nombre && Number(p.cantidad) > 0) {
+    f.presentacion = String(p.nombre);
+    f.cantidad = String(p.cantidad);
+  } else {
+    f.cantidad = String(Math.abs(Number(m?.cantidad) || 0));
+  }
+  if (m?.tipo === "compra") {
+    f.modoCosto = "total";
+    f.costo = String(Math.abs(Number(m.valor) || 0));
+    f.detalle = m.detalle ?? "";
+  } else {
+    f.detalle = m?.detalle ?? "";
+  }
+  return f;
+}
+
+/** El motivo de la anulación para `POST kardex/movimientos/:id/anular`, o el aviso de qué falta. */
+export function parsearAnulacion(motivo) {
+  const t = texto(motivo);
+  if (!t) return { ok: false, error: "Cuenta el motivo, por ejemplo «me equivoqué en la cantidad»." };
+  if (t.length > MAX_DETALLE) return { ok: false, error: `El motivo puede tener hasta ${MAX_DETALLE} caracteres.` };
+  return { ok: true, cuerpo: { detalle: t } };
 }
 
 // ---------- recetas ----------
