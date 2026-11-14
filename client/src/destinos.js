@@ -105,6 +105,15 @@ export const DESTINOS = [
     abre: { enlace: "agatas/app/?m=mesero" },
   },
   {
+    id: "empresa.inventario",
+    titulo: "Inventario",
+    descripcion: "Insumos, compras, mermas y conteo; recetas de los platos y su costo.",
+    requiere: "kardex:leer",
+    servicio: "tobt",
+    disponible: true,
+    abre: { pantalla: "admin:inventario" },
+  },
+  {
     id: "empresa.reportes",
     titulo: "Reportes",
     descripcion: "Ventas en el tiempo, por categoría, mesero y cliente, platos y horas pico.",

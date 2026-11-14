@@ -8,6 +8,7 @@ import { SERVICIO_PROMOCIONES } from "./promociones-logica.js";
 import { SERVICIO_ANUNCIOS } from "./anuncios-logica.js";
 import { SERVICIO_RESENAS } from "./resenas-logica.js";
 import { SERVICIO_JUEGO } from "./juego-logica.js";
+import { SERVICIO_INVENTARIO } from "./inventario-logica.js";
 
 export { permite };
 
@@ -47,6 +48,8 @@ export function capacidades(permisos) {
     resenas: { ver: p("resena:leer"), gestionar: p("resena:gestionar") && p("resena:leer") },
     // Juego de agatas (5.82): configuración. El mesero valida premios en la pantalla de agatas, no aquí.
     juego: { ver: p("juego:configurar"), gestionar: p("juego:configurar") },
+    // Inventario (5.77): insumos, compras, mermas, conteo y recetas. Ver pide kardex:leer; cada botón pide el mismo permiso que su ruta (registrar = compras y mermas; gestionar = insumos, saldo inicial, conteo y recetas).
+    inventario: { ver: p("kardex:leer"), registrar: p("kardex:registrar") && p("kardex:leer"), gestionar: p("kardex:gestionar") && p("kardex:leer") },
     // Importar desde Excel (5.64): el catálogo pide catalogo:gestionar y los clientes cliente:gestionar, como en el servidor.
     importar: { ver: p("catalogo:gestionar") || p("cliente:gestionar"), catalogo: p("catalogo:gestionar"), clientes: p("cliente:gestionar") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo
@@ -71,6 +74,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "anuncios", titulo: "Anuncios", visible: c.anuncios.ver && tieneServicio(SERVICIO_ANUNCIOS) },
     { id: "resenas", titulo: "Reseñas", visible: c.resenas.ver && tieneServicio(SERVICIO_RESENAS) },
     { id: "juego", titulo: "Juego", visible: c.juego.ver && tieneServicio(SERVICIO_JUEGO) },
+    { id: "inventario", titulo: "Inventario", visible: c.inventario.ver && tieneServicio(SERVICIO_INVENTARIO) },
     { id: "importar", titulo: "Importar", visible: c.importar.ver },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },

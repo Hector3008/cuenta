@@ -33,6 +33,8 @@ sin sesión → `Login` · `debeCambiarPassword` → `CambiarPassword` · sin em
 
 `Juego` (5.82, pestaña de Administración, `juego:configurar`, solo si la empresa tiene el servicio `agatas`): configura colores, piezas, premios, preguntas, textos y topes del juego (`GET`/`PUT /agatas/config`) y muestra el QR del local para imprimir. Los accesos de Inicio son «Juego de agatas» (esta pestaña) y «Canjear premios» (la pantalla del mesero, `/agatas/app/?m=mesero`, con `juego:validar`).
 
+`Inventario` (5.77, pestaña de Administración, `kardex:leer`, solo si la empresa tiene el servicio `tobt`; necesita el kardex del núcleo, 5.75, montado en `/kardex`, y las recetas de `tobt`, 5.76): tres vistas. **Insumos** (`GET /kardex/insumos` y `/kardex/valorizacion`): existencia, costo promedio y valor de cada insumo con sus alertas (negativo, bajo el mínimo); alta y edición de insumos con sus presentaciones (`kardex:gestionar`); compra y merma (`kardex:registrar`); conteo físico y saldo inicial (`kardex:gestionar`). Se escribe en la presentación que se compra (3 paquetes a 40) y el servidor lo pasa a la unidad base. **Recetas** (`GET`/`PUT`/`DELETE /tobt/recetas/:plato`): qué insumos gasta una porción de cada plato, con su costo y margen al costo promedio de hoy (`kardex:gestionar` para escribir). **Movimientos** (`GET /kardex/movimientos`): el libro del kardex, del más reciente al más antiguo, con filtros por insumo y tipo. Los accesos de Inicio y los permisos `kardex:*` están en la guía de roles.
+
 `Perfil`: datos de la persona y empresa activa, página principal, cambio de empresa (si tiene varias), cambio de contraseña, PIN de tablet (solo si la empresa lo tiene habilitado) y cerrar sesión.
 
 ## Destinos y página principal

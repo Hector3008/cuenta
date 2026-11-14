@@ -175,3 +175,16 @@
 .adm-juego-pregunta input { padding: 10px 12px; font: inherit; color: inherit; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 8px; box-sizing: border-box; }
 .adm-juego-fila input:focus-visible, .adm-juego-pregunta input:focus-visible { outline: 2px solid var(--color-principal); outline-offset: 1px; }
 .adm-juego-pregunta > span { flex: none; }
+
+/* Inventario (5.77) */
+.adm-subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.adm-resumen { display: flex; gap: 24px; flex-wrap: wrap; margin: 8px 0; }
+.adm-resumen > div { display: grid; gap: 2px; }
+.adm-resumen dt { font-size: .8125rem; color: var(--color-texto-suave); }
+.adm-resumen dd { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.adm-nota--alerta { color: var(--color-error); font-weight: 600; }
+.adm-etiqueta { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--color-borde); font-size: .75rem; color: var(--color-texto-suave); }
+.adm-etiqueta--alerta { border-color: var(--color-error); color: var(--color-error); }
+.adm-lista-simple { margin: 0; padding-left: 16px; font-size: .875rem; }
+.adm-linea-receta { align-items: end; }
+.adm-sub { display: block; color: var(--color-texto-suave); font-size: .75rem; overflow-wrap: anywhere; }

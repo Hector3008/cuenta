@@ -123,6 +123,15 @@ export const GUIA = [
     ],
   },
   {
+    id: "inventario",
+    titulo: "Inventario de insumos",
+    permisos: [
+      { id: "kardex:leer", titulo: "Ver el inventario", descripcion: "Ver los insumos, sus existencias y costos, los movimientos, las recetas de los platos y la valorización.", servicio: "tobt" },
+      { id: "kardex:registrar", titulo: "Registrar compras y mermas", descripcion: "Anotar lo que entra (compras) y lo que se pierde (mermas, con su motivo). Conviene darlo junto con kardex:leer.", servicio: "tobt" },
+      { id: "kardex:gestionar", titulo: "Gestionar el inventario", descripcion: "Crear y editar insumos y presentaciones, cargar el saldo inicial, corregir con un conteo físico y escribir las recetas de los platos. Conviene darlo junto con kardex:leer.", servicio: "tobt" },
+    ],
+  },
+  {
     id: "stock",
     titulo: "Stock",
     permisos: [
