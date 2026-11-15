@@ -49,7 +49,7 @@ export function capacidades(permisos) {
     // Juego de agatas (5.82): configuración. El mesero valida premios en la pantalla de agatas, no aquí.
     juego: { ver: p("juego:configurar"), gestionar: p("juego:configurar") },
     // Inventario (5.77): insumos, compras, mermas, conteo y recetas. Ver pide kardex:leer; cada botón pide el mismo permiso que su ruta (registrar = compras y mermas; gestionar = insumos, saldo inicial, conteo y recetas).
-    inventario: { ver: p("kardex:leer"), registrar: p("kardex:registrar") && p("kardex:leer"), gestionar: p("kardex:gestionar") && p("kardex:leer") },
+    inventario: { ver: p("kardex:leer"), reportes: p("kardex:leer") && p("reporte:leer"), registrar: p("kardex:registrar") && p("kardex:leer"), gestionar: p("kardex:gestionar") && p("kardex:leer") },
     // Importar desde Excel (5.64): el catálogo pide catalogo:gestionar y los clientes cliente:gestionar, como en el servidor.
     importar: { ver: p("catalogo:gestionar") || p("cliente:gestionar"), catalogo: p("catalogo:gestionar"), clientes: p("cliente:gestionar") },
     empresa: { ver: true }, // los datos básicos vienen en /auth/yo

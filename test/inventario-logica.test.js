@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ACCIONES, SERVICIO_INVENTARIO, TIPOS_MOVIMIENTO, accionDeCorreccion, formularioDeCorreccion, parsearAnulacion, puedeAnular, alertaDeInsumo, costoDeReceta, factorDe, formularioDeInsumo, formularioDeMovimiento, formularioDeReceta,
+  ACCIONES, SERVICIO_INVENTARIO, avisoSinCosto, consultaDeInventario, normalizarReporteInventario, textoMargenPct, TIPOS_MOVIMIENTO, accionDeCorreccion, formularioDeCorreccion, parsearAnulacion, puedeAnular, alertaDeInsumo, costoDeReceta, factorDe, formularioDeInsumo, formularioDeMovimiento, formularioDeReceta,
   margenDePlato, normalizarInsumo, normalizarMovimiento, normalizarReceta, parsearInsumo, parsearMovimiento, parsearNumero, parsearReceta,
   resumenValorizacion, textoCantidad, textoPresentacion, vistaPrevia,
 } from "../client/src/admin/inventario-logica.js";
+import { consultaDe } from "../client/src/admin/reportes-logica.js";
 import { capacidades, seccionesVisibles } from "../client/src/admin/permisos.js";
 import { DESTINOS, destinosAccesibles } from "../client/src/destinos.js";
 import { GUIA, explicacionDe } from "../client/src/admin/permisos-guia.js";
@@ -127,7 +128,11 @@ test("permisos: la pestaña pide kardex:leer y el servicio tobt; cada botón, su
   assert.deepEqual([g.ver, g.registrar, g.gestionar], [true, false, true]);
   const solo = capacidades(["kardex:gestionar"]).inventario;
   assert.deepEqual([solo.ver, solo.gestionar], [false, false], "gestionar sin leer no abre nada");
-  assert.deepEqual(Object.values(capacidades(["*"]).inventario), [true, true, true]);
+  assert.deepEqual(Object.values(capacidades(["*"]).inventario), [true, true, true, true]);
+  // Reportes (5.78): pide kardex:leer y reporte:leer
+  assert.equal(capacidades(["kardex:leer"]).inventario.reportes, false);
+  assert.equal(capacidades(["reporte:leer"]).inventario.reportes, false);
+  assert.equal(capacidades(["kardex:leer", "reporte:leer"]).inventario.reportes, true);
 });
 
 test("destinos y guía: Inicio ofrece Inventario y los tres permisos están explicados", () => {
@@ -175,4 +180,19 @@ test("anular pide un motivo", () => {
   assert.equal(parsearAnulacion("  ").ok, false);
   assert.equal(parsearAnulacion("x".repeat(201)).ok, false);
   assert.deepEqual(parsearAnulacion("  me  equivoqué "), { ok: true, cuerpo: { detalle: "me equivoqué" } });
+});
+
+test("reporte de inventario (5.78): normaliza la respuesta, el rango y los avisos", () => {
+  const r = normalizarReporteInventario({ desde: "2026-10-19", hasta: "2026-10-21", dias: 3, resumen: { ventas: "32.5", margenPct: null, itemsSinCosto: 2, ventasSinCosto: 13 }, platos: [{ nombre: "Moka", margen: null }, { nombre: "Latte", margen: 13.38, margenPct: 68.6 }], insumos: [{ insumoId: 7, nombre: "Café", consumo: { cantidad: 54, valor: 4.32 } }] });
+  assert.deepEqual([r.resumen.ventas, r.resumen.margenPct, r.platos[0].margen, r.platos[1].margenPct], [32.5, null, null, 68.6]);
+  assert.deepEqual([r.insumos[0].insumoId, r.insumos[0].consumo, r.insumos[0].merma], ["7", { cantidad: 54, valor: 4.32 }, { cantidad: 0, valor: 0 }]);
+  assert.deepEqual(normalizarReporteInventario(null).platos, []);
+  assert.equal(textoMargenPct(null), "—");
+  assert.equal(textoMargenPct(68.6), "68,6 %");
+  assert.equal(avisoSinCosto({ itemsSinCosto: 0 }), "");
+  assert.match(avisoSinCosto({ itemsSinCosto: 1, ventasSinCosto: 5 }), /1 ítem vendido no tiene costo \(5,00 en ventas\)/);
+  assert.match(avisoSinCosto({ itemsSinCosto: 2, ventasSinCosto: 13 }), /2 ítems vendidos no tienen costo/);
+  assert.deepEqual(consultaDeInventario({ atajo: "7" }, consultaDe), { consulta: { dias: 7 } });
+  assert.deepEqual(consultaDeInventario({ atajo: "personalizado", desde: "2026-10-01", hasta: "2026-10-10" }, consultaDe), { consulta: { desde: "2026-10-01", hasta: "2026-10-10" } });
+  assert.ok(consultaDeInventario({ atajo: "personalizado", desde: "", hasta: "" }, consultaDe).error);
 });

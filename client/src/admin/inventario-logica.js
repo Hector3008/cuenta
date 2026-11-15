@@ -238,6 +238,57 @@ export function vistaPrevia(accion, f, insumo) {
   return { base, costoUnitario };
 }
 
+// ---------- reportes del inventario (5.78) ----------
+
+const par = (x) => ({ cantidad: Number(x?.cantidad) || 0, valor: Number(x?.valor) || 0 });
+
+/** La respuesta de `GET tobt/reportes/inventario` con todos los campos presentes (números, listas), venga lo que venga. */
+export function normalizarReporteInventario(r) {
+  const n = (v) => Number(v) || 0;
+  const res = r?.resumen ?? {};
+  return {
+    desde: r?.desde ?? "", hasta: r?.hasta ?? "", dias: n(r?.dias), zona: r?.zona ?? "", moneda: r?.moneda ?? "",
+    platosTruncados: r?.platosTruncados === true,
+    resumen: {
+      compras: n(res.compras), consumo: n(res.consumo), merma: n(res.merma), ajuste: n(res.ajuste), ventas: n(res.ventas),
+      ventasConCosto: n(res.ventasConCosto), costoDeVentas: n(res.costoDeVentas), margen: n(res.margen),
+      margenPct: res.margenPct === null || res.margenPct === undefined ? null : n(res.margenPct),
+      itemsSinCosto: n(res.itemsSinCosto), ventasSinCosto: n(res.ventasSinCosto),
+    },
+    insumos: (Array.isArray(r?.insumos) ? r.insumos : []).map((i) => ({
+      insumoId: String(i?.insumoId ?? ""), codigo: i?.codigo ?? "", nombre: i?.nombre ?? "", unidad: i?.unidad ?? "",
+      compras: par(i?.compras), consumo: par(i?.consumo), merma: par(i?.merma), ajuste: par(i?.ajuste),
+    })),
+    platos: (Array.isArray(r?.platos) ? r.platos : []).map((p) => ({
+      codigo: p?.codigo ?? null, nombre: p?.nombre ?? "(sin nombre)", categoria: p?.categoria ?? null,
+      unidades: n(p?.unidades), ventas: n(p?.ventas), items: n(p?.items), itemsSinCosto: n(p?.itemsSinCosto),
+      ventasConCosto: n(p?.ventasConCosto), costo: n(p?.costo),
+      margen: p?.margen === null || p?.margen === undefined ? null : n(p.margen),
+      margenPct: p?.margenPct === null || p?.margenPct === undefined ? null : n(p.margenPct),
+    })),
+  };
+}
+
+/** El rango para la consulta (atajo de días o fechas), o el aviso de qué falta. El reporte del inventario no agrupa por tiempo. */
+export function consultaDeInventario(entrada, consultaDeVentas) {
+  const r = consultaDeVentas(entrada);
+  if (r.error) return r;
+  const { gran, ...resto } = r.consulta;
+  return { consulta: resto };
+}
+
+/** «68,6 %» o «—» cuando no hay costo con qué calcularlo. */
+export function textoMargenPct(p) {
+  return p === null || p === undefined ? "—" : `${Number(p).toLocaleString("es", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
+/** El aviso de lo vendido que no tiene costo (y por eso no entra en el margen), o "" si todo tiene costo. */
+export function avisoSinCosto(resumen) {
+  const n = Number(resumen?.itemsSinCosto) || 0;
+  if (n === 0) return "";
+  return `${n} ${n === 1 ? "ítem vendido no tiene" : "ítems vendidos no tienen"} costo (${textoDinero(resumen.ventasSinCosto)} en ventas): son platos sin receta o cobrados antes de llevar el inventario. No entran en el margen.`;
+}
+
 // ---------- corregir movimientos (5.84) ----------
 
 const ANULABLES = ["inventario_inicial", "compra", "merma", "ajuste"];

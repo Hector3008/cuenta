@@ -5,11 +5,13 @@ import { normalizarInsumo } from "./inventario-logica.js";
 import InventarioInsumos from "./InventarioInsumos.jsx";
 import InventarioRecetas from "./InventarioRecetas.jsx";
 import InventarioMovimientos from "./InventarioMovimientos.jsx";
+import InventarioReportes from "./InventarioReportes.jsx";
 
 const VISTAS = [
   ["insumos", "Insumos"],
   ["recetas", "Recetas"],
   ["movimientos", "Movimientos"],
+  ["reportes", "Reportes"], // consumo, costo de ventas y margen (5.78): pide también reporte:leer
 ];
 
 // Sección Inventario (5.77): insumos con su existencia y costo promedio (kardex del núcleo, 5.75), recetas de los platos
@@ -60,7 +62,7 @@ export default function Inventario({ cap }) {
       <Aviso onCerrar={() => setError("")}>{error}</Aviso>
 
       <nav className="adm-subtabs" aria-label="Vistas del inventario">
-        {VISTAS.map(([id, titulo]) => (
+        {VISTAS.filter(([id]) => id !== "reportes" || cap.reportes).map(([id, titulo]) => (
           <button key={id} type="button" aria-pressed={vista === id} className={vista === id ? "adm-btn adm-btn--primario" : "adm-btn"} onClick={() => setVista(id)}>
             {titulo}
           </button>
@@ -73,6 +75,7 @@ export default function Inventario({ cap }) {
         <>
           {vista === "insumos" && <InventarioInsumos cap={cap} insumos={insumos} valorizacion={valorizacion} recargar={cargar} preparar={preparar} alPreparar={() => setPreparar(null)} />}
           {vista === "recetas" && <InventarioRecetas cap={cap} insumos={insumos} />}
+          {vista === "reportes" && cap.reportes && <InventarioReportes />}
           {vista === "movimientos" && <InventarioMovimientos cap={cap} insumos={insumos} recargar={cargar} alCorregir={corregir} />}
         </>
       )}
