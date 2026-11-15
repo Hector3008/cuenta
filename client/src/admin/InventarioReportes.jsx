@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, mensajeAdmin } from "./http.js";
 import { Aviso } from "./piezas.jsx";
+import BotonExcel from "./BotonExcel.jsx";
 import { ATAJOS, ATAJO_POR_DEFECTO, consultaDe } from "./reportes-logica.js";
 import {
   avisoSinCosto, consultaDeInventario, normalizarReporteInventario, textoCantidad, textoCoberturaDeCosto, textoDinero, textoMargenPct,
@@ -73,6 +74,7 @@ export default function InventarioReportes() {
             Del {datos.desde} al {datos.hasta} ({datos.dias} {datos.dias === 1 ? "día" : "días"}, horario de {datos.zona}){datos.moneda ? ` · importes en ${datos.moneda}` : ""}.
             El costo de cada plato es el que descontó el inventario al hacer el pedido.
           </p>
+          <p><BotonExcel tipo="inventario" datos={datos} /></p>
           <dl className="adm-resumen">
             <div><dt>Ventas</dt><dd>{textoDinero(r.ventas)}</dd></div>
             <div><dt>Costo de ventas</dt><dd>{textoDinero(r.costoDeVentas)}</dd></div>
