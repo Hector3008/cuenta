@@ -282,6 +282,19 @@ export function textoMargenPct(p) {
   return p === null || p === undefined ? "—" : `${Number(p).toLocaleString("es", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 
+/** Qué parte de las ventas tiene costo (y por eso entra en el margen): «4 %», «100 %», o «—» si no hubo ventas. Menos de 1 % se muestra «< 1 %» y casi todo, «> 99 %», para no redondear a un extremo falso. */
+export function textoCoberturaDeCosto(resumen) {
+  const ventas = Number(resumen?.ventas) || 0;
+  if (ventas <= 0) return "—";
+  const conCosto = Math.min(Math.max(Number(resumen?.ventasConCosto) || 0, 0), ventas);
+  const p = (conCosto / ventas) * 100;
+  if (p === 0) return "0 %";
+  if (p === 100) return "100 %";
+  if (p < 1) return "< 1 %";
+  if (p > 99) return "> 99 %";
+  return `${Math.round(p)} %`;
+}
+
 /** El aviso de lo vendido que no tiene costo (y por eso no entra en el margen), o "" si todo tiene costo. */
 export function avisoSinCosto(resumen) {
   const n = Number(resumen?.itemsSinCosto) || 0;

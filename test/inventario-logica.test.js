@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ACCIONES, SERVICIO_INVENTARIO, avisoSinCosto, consultaDeInventario, normalizarReporteInventario, textoMargenPct, TIPOS_MOVIMIENTO, accionDeCorreccion, formularioDeCorreccion, parsearAnulacion, puedeAnular, alertaDeInsumo, costoDeReceta, factorDe, formularioDeInsumo, formularioDeMovimiento, formularioDeReceta,
+  ACCIONES, SERVICIO_INVENTARIO, avisoSinCosto, textoCoberturaDeCosto, consultaDeInventario, normalizarReporteInventario, textoMargenPct, TIPOS_MOVIMIENTO, accionDeCorreccion, formularioDeCorreccion, parsearAnulacion, puedeAnular, alertaDeInsumo, costoDeReceta, factorDe, formularioDeInsumo, formularioDeMovimiento, formularioDeReceta,
   margenDePlato, normalizarInsumo, normalizarMovimiento, normalizarReceta, parsearInsumo, parsearMovimiento, parsearNumero, parsearReceta,
   resumenValorizacion, textoCantidad, textoPresentacion, vistaPrevia,
 } from "../client/src/admin/inventario-logica.js";
@@ -195,4 +195,15 @@ test("reporte de inventario (5.78): normaliza la respuesta, el rango y los aviso
   assert.deepEqual(consultaDeInventario({ atajo: "7" }, consultaDe), { consulta: { dias: 7 } });
   assert.deepEqual(consultaDeInventario({ atajo: "personalizado", desde: "2026-10-01", hasta: "2026-10-10" }, consultaDe), { consulta: { desde: "2026-10-01", hasta: "2026-10-10" } });
   assert.ok(consultaDeInventario({ atajo: "personalizado", desde: "", hasta: "" }, consultaDe).error);
+});
+
+test("cobertura de costo (5.85): qué parte de las ventas entra en el margen", () => {
+  assert.equal(textoCoberturaDeCosto({ ventas: 231.6, ventasConCosto: 8.5 }), "4 %");
+  assert.equal(textoCoberturaDeCosto({ ventas: 100, ventasConCosto: 100 }), "100 %");
+  assert.equal(textoCoberturaDeCosto({ ventas: 100, ventasConCosto: 0 }), "0 %");
+  assert.equal(textoCoberturaDeCosto({ ventas: 1000, ventasConCosto: 3 }), "< 1 %");
+  assert.equal(textoCoberturaDeCosto({ ventas: 1000, ventasConCosto: 995 }), "> 99 %");
+  assert.equal(textoCoberturaDeCosto({ ventas: 0, ventasConCosto: 0 }), "—");
+  assert.equal(textoCoberturaDeCosto(null), "—");
+  assert.equal(textoCoberturaDeCosto({ ventas: 10, ventasConCosto: 50 }), "100 %", "nunca pasa de 100 %");
 });

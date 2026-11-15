@@ -3,7 +3,7 @@ import { api, mensajeAdmin } from "./http.js";
 import { Aviso } from "./piezas.jsx";
 import { ATAJOS, ATAJO_POR_DEFECTO, consultaDe } from "./reportes-logica.js";
 import {
-  avisoSinCosto, consultaDeInventario, normalizarReporteInventario, textoCantidad, textoDinero, textoMargenPct,
+  avisoSinCosto, consultaDeInventario, normalizarReporteInventario, textoCantidad, textoCoberturaDeCosto, textoDinero, textoMargenPct,
 } from "./inventario-logica.js";
 
 // Vista «Reportes» de Inventario (5.78): consumo de insumos, costo de ventas y margen por plato en un rango de fechas
@@ -76,8 +76,9 @@ export default function InventarioReportes() {
           <dl className="adm-resumen">
             <div><dt>Ventas</dt><dd>{textoDinero(r.ventas)}</dd></div>
             <div><dt>Costo de ventas</dt><dd>{textoDinero(r.costoDeVentas)}</dd></div>
-            <div><dt>Margen</dt><dd>{textoDinero(r.margen)}</dd></div>
-            <div><dt>Margen %</dt><dd>{textoMargenPct(r.margenPct)}</dd></div>
+            <div><dt>Ventas con costo</dt><dd>{textoCoberturaDeCosto(r)}</dd></div>
+            <div><dt>Margen (solo ventas con costo)</dt><dd>{textoDinero(r.margen)}</dd></div>
+            <div><dt>Margen % (solo ventas con costo)</dt><dd>{textoMargenPct(r.margenPct)}</dd></div>
             <div><dt>Insumos consumidos</dt><dd>{textoDinero(r.consumo)}</dd></div>
             <div><dt>Mermas</dt><dd>{textoDinero(r.merma)}</dd></div>
             <div><dt>Compras</dt><dd>{textoDinero(r.compras)}</dd></div>
