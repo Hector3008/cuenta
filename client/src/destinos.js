@@ -14,7 +14,7 @@ export function permite(permisos, requerido) {
  * Cada destino:
  *  - id: el valor que se guarda en `Usuario.paginaPrincipal`. Nunca una URL. Formato validado por el
  *    núcleo: 1 a 3 segmentos en minúsculas, números y "_", separados por punto.
- *  - requiere: permiso (formato `recurso:accion`) o null si basta con haber entrado.
+ *  - requiere: permiso (formato `recurso:accion`), una lista de permisos (hacen falta todos) o null si basta con haber entrado.
  *  - servicio: código del servicio que la empresa debe tener contratado y activo, o null.
  *  - disponible: solo los que ya tienen pantalla se muestran. Los demás documentan lo previsto.
  *  - abre: { pantalla } para una pantalla de `cuenta`, o { enlace } con una ruta relativa al gateway
@@ -123,6 +123,15 @@ export const DESTINOS = [
     abre: { pantalla: "admin:reportes" },
   },
   {
+    id: "empresa.facturas",
+    titulo: "Facturas",
+    descripcion: "Facturas que pidieron los clientes: cuáles faltan por emitir.",
+    requiere: ["documento:leer", "estacion:administracion"],
+    servicio: "tobt",
+    disponible: true,
+    abre: { pantalla: "admin:facturas" },
+  },
+  {
     id: "empresa.datos",
     titulo: "Empresa",
     descripcion: "Datos de la empresa y sus roles.",
@@ -187,7 +196,7 @@ export function destinosAccesibles(yo, catalogo = DESTINOS) {
       d.disponible &&
       d.abre &&
       (!d.servicio || servicios.includes(d.servicio)) &&
-      (!d.requiere || permite(permisos, d.requiere)),
+      [].concat(d.requiere ?? []).every((r) => permite(permisos, r)),
   );
 }
 

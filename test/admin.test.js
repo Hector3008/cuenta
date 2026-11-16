@@ -51,7 +51,7 @@ test("sin permisos o con una respuesta rara: solo Empresa (fallo seguro)", () =>
 
 test("cada destino que abre una pantalla de admin existe y respeta los permisos de su pestaña", () => {
   const abre = DESTINOS.filter((d) => d.disponible && d.abre?.pantalla?.startsWith("admin:"));
-  assert.deepEqual(abre.map((d) => d.abre.pantalla).sort(), ["admin:anuncios", "admin:catalogo", "admin:clientes", "admin:empresa", "admin:equipo", "admin:fidelizacion", "admin:inventario", "admin:juego", "admin:promociones", "admin:reportes", "admin:resenas"]);
+  assert.deepEqual(abre.map((d) => d.abre.pantalla).sort(), ["admin:anuncios", "admin:catalogo", "admin:clientes", "admin:empresa", "admin:equipo", "admin:facturas", "admin:fidelizacion", "admin:inventario", "admin:juego", "admin:promociones", "admin:reportes", "admin:resenas"]);
   const reportes = abre.find((d) => d.abre.pantalla === "admin:reportes");
   assert.equal(reportes.requiere, "reporte:leer");
   assert.equal(reportes.servicio, "tobt");

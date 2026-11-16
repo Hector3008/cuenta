@@ -35,7 +35,7 @@ test("registro: ids únicos y con el formato que acepta el backend", () => {
 test("registro: lo disponible sabe a dónde ir; lo previsto no promete nada", () => {
   for (const d of DESTINOS) {
     assert.ok(d.titulo && d.descripcion, d.id);
-    if (d.requiere) assert.match(d.requiere, /^[a-z][a-z0-9_]*:([a-z][a-z0-9_]*|\*)$/, d.id);
+    for (const r of [].concat(d.requiere ?? [])) assert.match(r, /^[a-z][a-z0-9_]*:([a-z][a-z0-9_]*|\*)$/, d.id);
     if (d.disponible) {
       const abre = d.abre;
       assert.ok(abre && (Boolean(abre.pantalla) !== Boolean(abre.enlace)), `${d.id}: una pantalla o un enlace`);
@@ -61,7 +61,7 @@ const idsVisibles = (yo) => destinosAccesibles(yo, catalogoDePrueba).map((d) => 
 
 test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina ya existen)", () => {
   const ids = (yo) => destinosAccesibles(yo).map((d) => d.id).sort();
-  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.inventario", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
+  assert.deepEqual(ids(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.facturas", "empresa.fidelizacion", "empresa.inventario", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
   assert.deepEqual(ids(yoCon(["*"], ["siscore"])), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion"]); // sin el servicio, sin Pedidos
@@ -69,7 +69,7 @@ test("accesibles: con el registro real, cada perfil ve lo suyo (Cuentas y Cocina
 });
 
 test("accesibles: admin ve todo lo de sus servicios; mesero y cocina, lo suyo", () => {
-  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.fidelizacion", "empresa.inventario", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
+  assert.deepEqual(idsVisibles(yoCon(["*"])), ["cuenta.perfil", "empresa.anuncios", "empresa.catalogo", "empresa.clientes", "empresa.datos", "empresa.equipo", "empresa.facturas", "empresa.fidelizacion", "empresa.inventario", "empresa.promociones", "empresa.reportes", "empresa.resenas", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(MESERO)), ["cuenta.perfil", "empresa.catalogo", "empresa.clientes", "empresa.datos", "tobt.pedidos"]);
   assert.deepEqual(idsVisibles(yoCon(COCINA)), ["cuenta.perfil", "empresa.datos", "tobt.cocina", "tobt.disponibilidad", "tobt.pedidos"]);
 });
@@ -175,4 +175,15 @@ test("accesibles: Stock solo aparece con el servicio `stock` contratado y el per
   assert.ok(!ids(yoCon(["*"], ["topd"])).includes("stock.dashboard")); // sin el servicio no se ofrece
   assert.ok(!ids(yoCon(["documento:leer"], ["topd", "stock"])).includes("stock.dashboard")); // sin permiso tampoco
   assert.ok(ids(yoCon(["stock:leer"], ["stock"])).includes("stock.dashboard"));
+});
+
+test("Facturas (5.89): pide documento:leer y la estación de administración; un mesero con solo documento:leer no la ve", () => {
+  const f = DESTINOS.find((d) => d.id === "empresa.facturas");
+  assert.deepEqual([f.requiere, f.servicio, f.abre], [["documento:leer", "estacion:administracion"], "tobt", { pantalla: "admin:facturas" }]);
+  const ids = (permisos, servicios = ["tobt"]) => destinosAccesibles({ permisos, servicios }).map((d) => d.id);
+  assert.ok(ids(["*"]).includes("empresa.facturas"));
+  assert.ok(ids(["documento:leer", "estacion:administracion"]).includes("empresa.facturas"));
+  assert.ok(!ids(["documento:leer"]).includes("empresa.facturas"));
+  assert.ok(!ids(["estacion:administracion"]).includes("empresa.facturas"));
+  assert.ok(!ids(["*"], []).includes("empresa.facturas"), "sin el servicio tobt no hay facturas");
 });

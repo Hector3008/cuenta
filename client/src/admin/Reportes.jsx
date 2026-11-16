@@ -349,7 +349,7 @@ export default function Reportes() {
             {rotuloLargo({ inicio: datos.desde }, "dia")} – {rotuloLargo({ inicio: datos.hasta }, "dia")} · {entero(datos.dias)} {datos.dias === 1 ? "día" : "días"} · horario de {datos.zona}.
             Ventas = lo cobrado (sin anulados ni pedidos abiertos), con las promociones y los vales ya descontados y sin propinas.
           </p>
-          <p><BotonExcel tipo="ventas" datos={datos} /></p>
+          <p><BotonExcel tipo="ventas" datos={datos} obtener={() => api.get("tobt/reportes/ventas", { ...q.consulta, completo: 1 })} /></p>
 
           <div className="rep-fichas">
             <div className="rep-ficha rep-ficha--heroe">

@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { destinosAccesibles } from "../destinos.js";
+import { api } from "../admin/http.js";
+import { textoPendientes } from "../admin/facturas-logica.js";
 
 // Primera vista de la sesión iniciada (5.22): saludo, empresa y rol, y un acceso por cada destino
 // que la persona puede ver (servicio contratado + permiso). Es un lanzador: cada servicio trae su
@@ -9,6 +12,21 @@ export default function Inicio({ yo, alAbrir, alCambiarEmpresa, alSalir }) {
   const destinos = destinosAccesibles(yo);
   // Perfil siempre está; si no hay nada más, se explica en vez de dejar la pantalla casi vacía.
   const soloPerfil = destinos.every((d) => d.id === "cuenta.perfil");
+
+  // Aviso de facturas pendientes (5.89): solo si ve el acceso a Facturas. Si falla, no se muestra nada.
+  const veFacturas = destinos.some((d) => d.id === "empresa.facturas");
+  const [pendientes, setPendientes] = useState(null);
+  useEffect(() => {
+    if (!veFacturas) return undefined;
+    let vigente = true;
+    api.get("tobt/facturas", { estado: "pendientes", resumen: 1 }).then(
+      (r) => vigente && setPendientes(Number(r?.resumen?.pendientes?.cantidad) || 0),
+      () => vigente && setPendientes(null),
+    );
+    return () => {
+      vigente = false;
+    };
+  }, [veFacturas, yo.empresaActivaId]);
 
   return (
     <main className="centrado" style={{ alignItems: "start" }}>
@@ -27,6 +45,9 @@ export default function Inicio({ yo, alAbrir, alCambiarEmpresa, alSalir }) {
                 <button type="button" className="destino" onClick={() => alAbrir(d)}>
                   <strong>{d.titulo}</strong>
                   <small>{d.descripcion}</small>
+                  {d.id === "empresa.facturas" && pendientes !== null && (
+                    <small role="status"><strong>{textoPendientes(pendientes)}</strong></small>
+                  )}
                 </button>
               </li>
             ))}
