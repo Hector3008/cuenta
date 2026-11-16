@@ -59,9 +59,9 @@ export function hojasDeVentas(d) {
   const promociones = hoja("Promociones", ["Promoción", "Ahorro", "Ítems", "Unidades", "% del ahorro"], filasPromos, [32, 14, 10, 10, 14]);
   const facturas = hoja(
     "Facturas pedidas",
-    ["Recibo", "Fecha", "Pedido", "RUC / referencia", "Cliente", "Subtotal", "Propina", "Total", "Forma de pago"],
-    (d?.facturas ?? []).map((f) => [t(f.recibo), fechaHoraEn(f.ts, d?.zona), t(f.pedido), t(f.rucReferencia), t(f.cliente), n(f.subtotal), n(f.propina), n(f.total), t(f.metodoTexto)]),
-    [14, 18, 14, 22, 24, 12, 10, 12, 18],
+    ["Recibo", "Fecha", "Pedido", "RUC / referencia", "Cliente", "Subtotal", "Propina", "Total", "Forma de pago", "Estado", "N.º de factura"],
+    (d?.facturas ?? []).map((f) => [t(f.recibo), fechaHoraEn(f.ts, d?.zona), t(f.pedido), t(f.rucReferencia), t(f.cliente), n(f.subtotal), n(f.propina), n(f.total), t(f.metodoTexto), f.estado === "emitida" ? "Emitida" : "Pendiente", t(f.numeroFactura)]),
+    [14, 18, 14, 22, 24, 12, 10, 12, 18, 12, 18],
   );
   return [resumen, serie, categorias, meseros, clientes, platos, horas, canales, pagos, promociones, facturas];
 }

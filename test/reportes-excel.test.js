@@ -20,7 +20,7 @@ const ventas = {
   canales: [{ canal: "salon", ventas: 18, items: 2, porcentaje: 69.2 }],
   pagos: [{ metodo: "yape", metodoTexto: "Yape", recibos: 1, cobrado: 13, propinas: 1 }],
   promociones: { ahorro: 10, ventasAntes: 36, porcentaje: 27.8, items: 1, porPromocion: [{ nombre: "2×1 en lattes", ahorro: 10, items: 1, unidades: 2, porcentaje: 100 }], otras: { cantidad: 2, ahorro: 1, items: 1 } },
-  facturas: [{ recibo: "RC-0000001", ts: "2026-10-20T15:05:00Z", pedido: "PD-0000001", rucReferencia: "20123456789", cliente: "Ana", subtotal: 13, propina: 1, total: 14, metodoTexto: "Yape" }],
+  facturas: [{ recibo: "RC-0000001", ts: "2026-10-20T15:05:00Z", pedido: "PD-0000001", rucReferencia: "20123456789", cliente: "Ana", subtotal: 13, propina: 1, total: 14, metodoTexto: "Yape", estado: "emitida", numeroFactura: "F001-9" }],
 };
 
 const celdas = (h) => h.filas.slice(1);
@@ -36,7 +36,7 @@ test("ventas: una hoja por cada lista del reporte, con cabecera y los importes c
   assert.deepEqual(celdas(por["Por hora"]), [["Lunes", "22:00", 13, 1]], "solo las horas con ventas");
   assert.deepEqual(celdas(por.Clientes).at(-1), ["Sin cliente", 13, 2, 50]);
   assert.deepEqual(celdas(por.Promociones).at(-1), ["Otras 2 promociones", 1, 1, null, null]);
-  assert.deepEqual(celdas(por["Facturas pedidas"]), [["RC-0000001", "2026-10-20 10:05", "PD-0000001", "20123456789", "Ana", 13, 1, 14, "Yape"]], "la fecha va en la hora de la empresa");
+  assert.deepEqual(celdas(por["Facturas pedidas"]), [["RC-0000001", "2026-10-20 10:05", "PD-0000001", "20123456789", "Ana", 13, 1, 14, "Yape", "Emitida", "F001-9"]], "la fecha va en la hora de la empresa");
 });
 
 test("ventas: con un reporte vacío o incompleto no se rompe", () => {

@@ -9,6 +9,7 @@ import { SERVICIO_ANUNCIOS } from "./anuncios-logica.js";
 import { SERVICIO_RESENAS } from "./resenas-logica.js";
 import { SERVICIO_JUEGO } from "./juego-logica.js";
 import { SERVICIO_INVENTARIO } from "./inventario-logica.js";
+import { SERVICIO_FACTURAS } from "./facturas-logica.js";
 
 export { permite };
 
@@ -56,6 +57,8 @@ export function capacidades(permisos) {
     marca: { gestionar: p("empresa:marca") }, // logo, eslogan y colores de la carta pública (5.33)
     datos: { gestionar: p("empresa:datos") }, // datos que salen en los recibos (5.34)
     reportes: { ver: p("reporte:leer") }, // reportes de ventas (5.35); los calcula el servicio, no el navegador
+    // Facturas pedidas (5.88): la lista pide documento:leer y la estación de administración; marcar y deshacer, documento:editar; el ajuste del número obligatorio, empresa:datos.
+    facturas: { ver: p("documento:leer") && p("estacion:administracion"), marcar: p("documento:editar") && p("estacion:administracion"), configurar: p("empresa:datos") },
   };
 }
 
@@ -77,6 +80,7 @@ export function seccionesVisibles(permisos, servicios) {
     { id: "inventario", titulo: "Inventario", visible: c.inventario.ver && tieneServicio(SERVICIO_INVENTARIO) },
     { id: "importar", titulo: "Importar", visible: c.importar.ver },
     { id: "reportes", titulo: "Reportes", visible: c.reportes.ver && tieneServicio(SERVICIO_REPORTES) },
+    { id: "facturas", titulo: "Facturas", visible: c.facturas.ver && tieneServicio(SERVICIO_FACTURAS) },
     { id: "empresa", titulo: "Empresa", visible: c.empresa.ver },
   ].filter((s) => s.visible);
 }
