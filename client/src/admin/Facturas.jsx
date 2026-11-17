@@ -128,8 +128,8 @@ export default function Facturas({ cap }) {
                 <tbody>
                   {datos.facturas.map((f) => (
                     <tr key={f.recibo}>
-                      <td>{f.recibo}{f.pedido ? <small> · {f.pedido}</small> : null}</td>
-                      <td>{fechaHoraEn(f.ts, datos.zona) ?? "—"}</td>
+                      <td><span style={{ whiteSpace: "nowrap" }}>{f.recibo}</span>{f.pedido ? <small style={{ display: "block" }}>{f.pedido}</small> : null}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{fechaHoraEn(f.ts, datos.zona) ?? "—"}</td>
                       <td>{f.cliente ?? "—"}</td>
                       <td>{f.rucReferencia ?? "—"}</td>
                       <td>{dinero(f.total)}</td>
